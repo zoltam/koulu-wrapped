@@ -7,7 +7,7 @@ export default function Home() {
       <h1 className="text-6xl font-bold mb-4">Koulu Wrapped</h1>
       <p className="text-xl mb-8">Discover your school year, wrapped up!</p>
       <Link href="/signin">
-        <Button variant="secondary" size="lg">
+        <Button variant="secondary" size="lg" className="rounded-full">
           Sign in with Wilma
         </Button>
       </Link>

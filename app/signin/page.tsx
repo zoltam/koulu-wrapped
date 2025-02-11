@@ -27,13 +27,10 @@ export default function SignIn() {
       })
       const data = await response.json()
       if (data.success) {
-        // Immediately store credentials temporarily
         sessionStorage.setItem("wilmaAuth", JSON.stringify({
           username,
           password
         }));
-        
-        // Redirect before scraping completes
         router.push("/wrapped?loading=true");
       } else {
         setError("Failed to connect to Wilma. Please check your credentials.")
@@ -51,14 +48,14 @@ export default function SignIn() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md p-8 space-y-8 bg-card rounded-lg shadow-lg"
+        className="w-full max-w-md p-8 space-y-8 bg-card rounded-xl shadow-lg"
       >
         <h1 className="text-3xl font-bold text-center text-primary">Sign in with Wilma</h1>
         {error && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="p-3 text-sm text-destructive-foreground bg-destructive rounded"
+            className="p-3 text-sm text-destructive-foreground bg-destructive rounded-md"
           >
             {error}
           </motion.div>
@@ -72,7 +69,7 @@ export default function SignIn() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
-              className="bg-input text-foreground"
+              className="bg-input text-foreground rounded-[6px]"
             />
           </div>
           <div className="space-y-2">
@@ -83,10 +80,10 @@ export default function SignIn() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="bg-input text-foreground"
+              className="bg-input text-foreground rounded-[6px]"
             />
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button type="submit" className="w-full rounded-[8px]" disabled={isLoading}>
             {isLoading ? (
               <motion.div
                 animate={{ rotate: 360 }}
@@ -102,4 +99,3 @@ export default function SignIn() {
     </div>
   )
 }
-
