@@ -69,9 +69,68 @@ export async function POST(request: Request) {
     }
 
     console.log("Scraped unread messages:", unreadMessages);
+
+    // Navigate to the grades page (replace with the correct URL)
+    await page.goto("https://yvkoulut.inschool.fi/choices");
+    console.log("Navigated to grades page");
+
+    // Wait for the grades table to load
+    await page.waitForSelector("#choices-tree");
+    console.log("Grades table loaded");
+    await page.click('#cb-show-graded');
+
+    // Scrape course names and grades
+    const { subjects, grades } = await page.evaluate(() => {
+      const subjects: string[] = [];
+      const grades: number[][] = [];
+
+      // Find all top-level subject elements
+      const topLevelSubjects = document.querySelectorAll(
+        "#choices-tree > li.flag-show > a"
+      );
+
+      topLevelSubjects.forEach((subjectElement) => {
+        const subjectName = subjectElement
+          .querySelector(".expand")
+          ?.textContent?.trim();
+        if (subjectName) {
+          subjects.push(subjectName);
+
+          // Find grades for this subject
+          const subjectGrades: number[] = [];
+          let sibling = subjectElement.parentElement?.nextElementSibling;
+          while (sibling) {
+            if (sibling.tagName === "UL") {
+              const gradeElements = sibling.querySelectorAll("a .shrink");
+              gradeElements.forEach((gradeElement) => {
+                const gradeText = gradeElement.textContent?.trim();
+                if (gradeText && !isNaN(Number(gradeText))) {
+                  subjectGrades.push(Number(gradeText));
+                }
+              });
+              break; // Stop after processing the first nested <ul>
+            }
+            sibling = sibling.nextElementSibling;
+          }
+
+          grades.push(subjectGrades);
+        }
+      });
+
+      return { subjects, grades };
+    });
+
+    console.log("Scraped subjects:", subjects);
+    console.log("Scraped grades:", grades);
+
     await browser.close();
 
-    return NextResponse.json({ success: true, unreadMessages });
+    return NextResponse.json({
+      success: true,
+      unreadMessages,
+      subjects,
+      grades,
+    });
   } catch (error) {
     console.error("Error connecting to Wilma:", error);
     return NextResponse.json(
