@@ -78,50 +78,65 @@ export async function POST(request: Request) {
     await page.waitForSelector("#choices-tree");
     console.log("Grades table loaded");
     await page.click('#cb-show-graded');
+    
+    // Wait for grades to load after clicking the checkbox
+    await new Promise((resolve) => setTimeout(resolve, 2000)); // Adjust timeout as needed
 
     // Scrape course names and grades
+
     const { subjects, grades } = await page.evaluate(() => {
       const subjects: string[] = [];
       const grades: number[][] = [];
-
-      // Find all top-level subject elements
-      const topLevelSubjects = document.querySelectorAll(
-        "#choices-tree > li.flag-show > a"
+    
+      // Find main category headings
+      const mainCategories = document.querySelectorAll(
+        "#choices-tree > li.flag-show > ul > li.flag-show > a"
       );
-
-      topLevelSubjects.forEach((subjectElement) => {
-        const subjectName = subjectElement
-          .querySelector(".expand")
-          ?.textContent?.trim();
-        if (subjectName) {
-          subjects.push(subjectName);
-
-          // Find grades for this subject
-          const subjectGrades: number[] = [];
-          let sibling = subjectElement.parentElement?.nextElementSibling;
-          while (sibling) {
-            if (sibling.tagName === "UL") {
-              const gradeElements = sibling.querySelectorAll("a .shrink");
-              gradeElements.forEach((gradeElement) => {
-                const gradeText = gradeElement.textContent?.trim();
-                if (gradeText && !isNaN(Number(gradeText))) {
-                  subjectGrades.push(Number(gradeText));
-                }
-              });
-              break; // Stop after processing the first nested <ul>
-            }
-            sibling = sibling.nextElementSibling;
+    
+      mainCategories.forEach((categoryElement) => {
+        const categoryName = categoryElement.querySelector('.expand')?.textContent?.trim();
+        if (!categoryName) return;
+    
+        // Find the subject-level elements within each category
+        const subjectElements = categoryElement.parentElement?.querySelectorAll(
+          'ul > li.flag-show > a.c-type236-graded'
+        );
+    
+        subjectElements?.forEach((subjectElement) => {
+          const subjectName = subjectElement.querySelector('.expand')?.textContent?.trim();
+          if (subjectName) {
+            subjects.push(subjectName);
+    
+            // Extract grades from both c-type237-graded and c-type238-graded
+            const subjectGrades: number[] = [];
+            const gradeElements = subjectElement.parentElement?.querySelectorAll(
+              'ul > li.flag-show > a.c-type237-graded .expand, ' +
+              'ul > li.flag-show > a.c-type238-graded .expand'
+            );
+    
+            gradeElements?.forEach(gradeEl => {
+              const gradeText = gradeEl.textContent?.trim();
+              if (gradeText && !isNaN(Number(gradeText))) {
+                subjectGrades.push(Number(gradeText));
+              }
+            });
+    
+            grades.push(subjectGrades);
           }
-
-          grades.push(subjectGrades);
-        }
+        });
       });
-
+    
       return { subjects, grades };
     });
 
-    console.log("Scraped subjects:", subjects);
-    console.log("Scraped grades:", grades);
+
+    // Add formatted printing
+    console.log("\nFormatted Results:");
+    subjects.forEach((subject, index) => {
+      console.log(`Subject: ${subject}`);
+      console.log(`Grades: [${grades[index].join(", ")}]`);
+      console.log("-------------------");
+    });
 
     await browser.close();
 
