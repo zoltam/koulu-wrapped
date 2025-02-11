@@ -27,8 +27,14 @@ export default function SignIn() {
       })
       const data = await response.json()
       if (data.success) {
-        sessionStorage.setItem("unreadMessages", data.unreadMessages.toString())
-        router.push("/wrapped")
+        // Immediately store credentials temporarily
+        sessionStorage.setItem("wilmaAuth", JSON.stringify({
+          username,
+          password
+        }));
+        
+        // Redirect before scraping completes
+        router.push("/wrapped?loading=true");
       } else {
         setError("Failed to connect to Wilma. Please check your credentials.")
       }
