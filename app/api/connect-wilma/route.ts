@@ -43,6 +43,7 @@ export async function POST(request: Request) {
     // Handle different steps
     if (step === "unread") {
       const unreadMessages = await getUnreadMessages(page);
+      console.log("Unread messages:", unreadMessages);
       await browser.close();
       return NextResponse.json({ success: true, unreadMessages });
     }
