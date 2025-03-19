@@ -11,6 +11,8 @@ export default function Wrapped() {
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [subjects, setSubjects] = useState<string[]>([])
   const [grades, setGrades] = useState<number[][]>([])
+  const [error, setError] = useState<string | null>(null)
+  const [debugInfo, setDebugInfo] = useState<string | null>(null)
   const searchParams = useSearchParams()
 
   useEffect(() => {
@@ -18,8 +20,15 @@ export default function Wrapped() {
       try {
         // Retrieve stored credentials
         const wilmaAuth = JSON.parse(sessionStorage.getItem("wilmaAuth") || "{}")
+        console.log("Retrieved auth from session storage:", !!wilmaAuth.username, !!wilmaAuth.password)
+        
+        if (!wilmaAuth.username || !wilmaAuth.password) {
+          setError("Missing credentials. Please sign in again.")
+          return
+        }
         
         // First load: unread messages
+        console.log("Fetching unread messages...")
         const res1 = await fetch("/api/connect-wilma", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -29,11 +38,25 @@ export default function Wrapped() {
             step: "unread"
           })
         });
-        const { unreadMessages } = await res1.json()
-        setUnreadMessages(unreadMessages)
-        setLoadProgress(50)
+        
+        if (!res1.ok) {
+          const errorData = await res1.json();
+          console.error("Unread messages fetch failed:", errorData);
+          setError(`Failed to fetch unread messages: ${errorData.error || res1.status}`);
+          setDebugInfo(JSON.stringify(errorData, null, 2));
+          return;
+        }
+        
+        const unreadData = await res1.json();
+        console.log("Unread messages response:", unreadData);
+        setUnreadMessages(unreadData.unreadMessages || 0);
+        setLoadProgress(50);
+        
+        // Add unread messages to sessionStorage
+        sessionStorage.setItem("unreadMessages", String(unreadData.unreadMessages || 0));
 
         // Second load: grades data
+        console.log("Fetching grades data...")
         const res2 = await fetch("/api/connect-wilma", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -43,23 +66,58 @@ export default function Wrapped() {
             step: "grades"
           })
         });
-        const { subjects, grades } = await res2.json()
-        setSubjects(subjects)
-        setGrades(grades)
-        setLoadProgress(100)
+        
+        if (!res2.ok) {
+          const errorData = await res2.json();
+          console.error("Grades fetch failed:", errorData);
+          setError(`Failed to fetch grades: ${errorData.error || res2.status}`);
+          setDebugInfo(JSON.stringify(errorData, null, 2));
+          return;
+        }
+        
+        const gradesData = await res2.json();
+        console.log("Grades response:", gradesData);
+        setSubjects(gradesData.subjects || []);
+        setGrades(gradesData.grades || []);
+        setLoadProgress(100);
+
+        // Add grades to sessionStorage
+        sessionStorage.setItem("subjects", JSON.stringify(gradesData.subjects || []));
+        sessionStorage.setItem("grades", JSON.stringify(gradesData.grades || []));
 
       } catch (error) {
-        console.error("Loading failed:", error)
-        // Handle error state
+        console.error("Loading failed:", error);
+        setError(`An error occurred: ${(error as Error).message}`);
+        setDebugInfo(JSON.stringify(error, null, 2));
       } finally {
-        sessionStorage.removeItem("wilmaAuth")
+        sessionStorage.removeItem("wilmaAuth");
       }
     }
 
     if (searchParams.get("loading")) {
-      loadData()
+      loadData();
     }
-  }, [searchParams])
+  }, [searchParams]);
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
+        <div className="w-full max-w-md p-6 bg-destructive/20 rounded-lg">
+          <h2 className="text-xl font-bold text-destructive-foreground mb-4">Error</h2>
+          <p className="mb-4">{error}</p>
+          <pre className="p-4 bg-card text-sm overflow-auto max-h-64 rounded-md">
+            {debugInfo}
+          </pre>
+          <button 
+            onClick={() => window.location.href = '/signin'}
+            className="mt-4 px-4 py-2 bg-secondary text-secondary-foreground rounded-md"
+          >
+            Back to Sign In
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (loadProgress < 100) {
     return (
