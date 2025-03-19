@@ -26,45 +26,7 @@ export default function Slideshow() {
   const [grades, setGrades] = useState<number[][]>([])
   const [isLoading, setIsLoading] = useState(true)
   
-  useEffect(() => {
-    // Retrieve data from sessionStorage
-    const storedUnreadMessages = sessionStorage.getItem("unreadMessages")
-    const storedSubjects = sessionStorage.getItem("subjects")
-    const storedGrades = sessionStorage.getItem("grades")
-    
-    console.log("Retrieved from sessionStorage:", {
-      unreadMessages: storedUnreadMessages,
-      subjects: !!storedSubjects,
-      grades: !!storedGrades
-    })
-    
-    setUnreadMessages(storedUnreadMessages ? Number.parseInt(storedUnreadMessages, 10) : 0)
-    
-    if (storedSubjects) {
-      try {
-        setSubjects(JSON.parse(storedSubjects))
-      } catch (error) {
-        console.error("Failed to parse subjects:", error)
-      }
-    }
-    
-    if (storedGrades) {
-      try {
-        setGrades(JSON.parse(storedGrades))
-      } catch (error) {
-        console.error("Failed to parse grades:", error)
-      }
-    }
-    
-    setIsLoading(false)
-
-    const timer = setInterval(() => {
-      setCurrentSlide((prevSlide) => (prevSlide + 1) % slides.length)
-    }, 5000) // Change slide every 5 seconds
-
-    return () => clearInterval(timer)
-  }, [])
-  
+  // Helper functions
   const getAverageGrade = (): number => {
     if (!grades.length) return 0
     
@@ -78,7 +40,7 @@ export default function Slideshow() {
       })
     })
     
-    return totalCount > 0 ? parseFloat((totalGrades / totalCount).toFixed(1)) : 0
+    return totalCount > 0 ? parseFloat((totalGrades / totalCount).toFixed(2)) : 0
   }
   
   const getBestSubject = (): { subject: string, average: number } => {
@@ -99,16 +61,8 @@ export default function Slideshow() {
     
     return { subject: bestSubject || "None", average: parseFloat(bestAvg.toFixed(1)) }
   }
-  
-  // Debug display of loaded data
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">Loading data...</p>
-      </div>
-    )
-  }
 
+  // Define slides here, after the helper functions
   const slides = [
     {
       id: 1,
@@ -179,6 +133,54 @@ export default function Slideshow() {
       )
     }
   ]
+  
+  useEffect(() => {
+    // Retrieve data from sessionStorage
+    const storedUnreadMessages = sessionStorage.getItem("unreadMessages")
+    const storedSubjects = sessionStorage.getItem("subjects")
+    const storedGrades = sessionStorage.getItem("grades")
+    
+    console.log("Retrieved from sessionStorage:", {
+      unreadMessages: storedUnreadMessages,
+      subjects: !!storedSubjects,
+      grades: !!storedGrades
+    })
+    
+    setUnreadMessages(storedUnreadMessages ? Number.parseInt(storedUnreadMessages, 10) : 0)
+    
+    if (storedSubjects) {
+      try {
+        setSubjects(JSON.parse(storedSubjects))
+      } catch (error) {
+        console.error("Failed to parse subjects:", error)
+      }
+    }
+    
+    if (storedGrades) {
+      try {
+        setGrades(JSON.parse(storedGrades))
+      } catch (error) {
+        console.error("Failed to parse grades:", error)
+      }
+    }
+    
+    setIsLoading(false)
+
+    const timer = setInterval(() => {
+      setCurrentSlide((prevSlide) => (prevSlide + 1) % slides.length)
+    }, 5000) // Change slide every 5 seconds
+
+    return () => clearInterval(timer)
+  }, [])  // Note: adding slides to the dependency array would cause infinite renders
+  
+  // Debug display of loaded data
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-muted-foreground">Loading data...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="relative w-full h-full bg-card rounded-lg shadow-lg p-6">
