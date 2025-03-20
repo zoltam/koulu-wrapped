@@ -3,7 +3,7 @@ import puppeteer, { Page } from "puppeteer";
 
 export async function POST(request: Request) {
   console.log("API route called with request:", request.url);
-  
+
   let requestBody;
   try {
     requestBody = await request.json();
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
-  
+
   const { wilmaUsername, wilmaPassword, step } = requestBody;
 
   console.log("Credentials check:", {
@@ -96,6 +96,21 @@ export async function POST(request: Request) {
       });
       await browser.close();
       return NextResponse.json({ success: true, subjects, grades });
+    }
+
+    if (step === "attendance") {
+      console.log("Processing attendance step");
+      console.log("Navigating to attendance page...");
+      await page.goto("https://yvkoulut.inschool.fi/attendance/view?range=-4");
+      console.log("Waiting for attendance table to load...");
+      await page.waitForSelector('.datatable.attendance-single', { timeout: 10000 });
+      
+      console.log("Fetching attendance data...");
+      const attendanceData = await getAttendanceData(page);
+      console.log("Attendance data retrieved:", attendanceData);
+      
+      await browser.close();
+      return NextResponse.json({ success: true, attendance: attendanceData });
     }
 
     // Handle initial login without step parameter
@@ -231,5 +246,54 @@ async function getGradesData(page: Page): Promise<{ subjects: string[], grades: 
   } catch (error) {
     console.error("Error fetching grades:", error);
     return { subjects: [], grades: [] };
+  }
+}
+
+interface AttendanceData {
+  courseCode: string;
+  marks: {
+    [key: string]: number;
+  };
+}
+
+async function getAttendanceData(page: Page): Promise<AttendanceData[]> {
+  console.log("Starting getAttendanceData function");
+  try {
+    await page.waitForSelector('.datatable.attendance-single');
+    
+    return await page.evaluate(() => {
+      const courses: { [key: string]: { [markType: string]: number } } = {};
+      const relevantMarks = new Set([
+        'Terveydellisiin syihin liittyvä poissaolo',
+        'Luvaton poissaolo (selvitetty)',
+        'Myöhässä alle 15 min'
+      ]);
+
+      document.querySelectorAll('td.event').forEach(element => {
+        const title = element.getAttribute('title');
+        if (!title) return;
+
+        // Parse course code and mark type from title
+        const [coursePart, ...rest] = title.split(';');
+        const courseCode = coursePart.trim();
+        const markPart = rest.join(';').split('/')[0].trim();
+
+        if (relevantMarks.has(markPart)) {
+          if (!courses[courseCode]) {
+            courses[courseCode] = {};
+          }
+          courses[courseCode][markPart] = (courses[courseCode][markPart] || 0) + 1;
+        }
+      });
+
+      // Convert to array format
+      return Object.entries(courses).map(([courseCode, marks]) => ({
+        courseCode,
+        marks
+      }));
+    });
+  } catch (error) {
+    console.error("Error fetching attendance data:", error);
+    return [];
   }
 }
