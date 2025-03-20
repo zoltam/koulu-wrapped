@@ -6,11 +6,19 @@ import { motion } from "framer-motion"
 import Slideshow from "@/components/Slideshow"
 import { useSearchParams } from "next/navigation"
 
+interface AttendanceData {
+  courseCode: string;
+  marks: {
+    [key: string]: number;
+  };
+}
+
 export default function Wrapped() {
   const [loadProgress, setLoadProgress] = useState(0)
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [subjects, setSubjects] = useState<string[]>([])
   const [grades, setGrades] = useState<number[][]>([])
+  const [attendanceData, setAttendanceData] = useState<AttendanceData[]>([])
   const [error, setError] = useState<string | null>(null)
   const [debugInfo, setDebugInfo] = useState<string | null>(null)
   const searchParams = useSearchParams()
@@ -50,7 +58,7 @@ export default function Wrapped() {
         const unreadData = await res1.json();
         console.log("Unread messages response:", unreadData);
         setUnreadMessages(unreadData.unreadMessages || 0);
-        setLoadProgress(50);
+        setLoadProgress(33);
         
         // Add unread messages to sessionStorage
         sessionStorage.setItem("unreadMessages", String(unreadData.unreadMessages || 0));
@@ -79,11 +87,39 @@ export default function Wrapped() {
         console.log("Grades response:", gradesData);
         setSubjects(gradesData.subjects || []);
         setGrades(gradesData.grades || []);
-        setLoadProgress(100);
+        setLoadProgress(66);
 
         // Add grades to sessionStorage
         sessionStorage.setItem("subjects", JSON.stringify(gradesData.subjects || []));
         sessionStorage.setItem("grades", JSON.stringify(gradesData.grades || []));
+
+        // Third load: attendance data
+        console.log("Fetching attendance data...")
+        const res3 = await fetch("/api/connect-wilma", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            wilmaUsername: wilmaAuth.username,
+            wilmaPassword: wilmaAuth.password,
+            step: "attendance"
+          })
+        });
+        
+        if (!res3.ok) {
+          const errorData = await res3.json();
+          console.error("Attendance fetch failed:", errorData);
+          setError(`Failed to fetch attendance: ${errorData.error || res3.status}`);
+          setDebugInfo(JSON.stringify(errorData, null, 2));
+          return;
+        }
+        
+        const attendanceData = await res3.json();
+        console.log("Attendance response:", attendanceData);
+        setAttendanceData(attendanceData.attendance || []);
+        setLoadProgress(100);
+
+        // Add attendance to sessionStorage
+        sessionStorage.setItem("attendance", JSON.stringify(attendanceData.attendance || []));
 
       } catch (error) {
         console.error("Loading failed:", error);
@@ -132,7 +168,9 @@ export default function Wrapped() {
             />
           </div>
           <motion.p className="text-center text-muted-foreground">
-            {loadProgress < 50 ? "Finalizing login..." : "Analyzing your grades..."}
+            {loadProgress < 33 ? "Finalizing login..." : 
+             loadProgress < 66 ? "Analyzing your grades..." : 
+             "Checking your attendance..."}
           </motion.p>
         </motion.div>
       </div>
