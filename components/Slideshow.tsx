@@ -36,21 +36,105 @@ export default function Slideshow() {
   const [slidesData, setSlidesData] = useState<any[]>([])
   
   // Helper functions
-  const getAverageGrade = (): number => {
-    if (!grades.length) return 0
-    
-    let totalGrades = 0
-    let totalCount = 0
-    
-    grades.forEach(subjectGrades => {
-      subjectGrades.forEach(grade => {
-        totalGrades += grade
-        totalCount++
-      })
-    })
-    
-    return totalCount > 0 ? parseFloat((totalGrades / totalCount).toFixed(2)) : 0
+  // components/Slideshow.tsx - Improve data handling
+
+// Add a data loading retry mechanism
+useEffect(() => {
+  // Retrieve data from sessionStorage
+  const storedUnreadMessages = sessionStorage.getItem("unreadMessages")
+  const storedSubjects = sessionStorage.getItem("subjects")
+  const storedGrades = sessionStorage.getItem("grades")
+  const storedAttendance = sessionStorage.getItem("attendance")
+  
+  console.log("Retrieved from sessionStorage:", {
+    unreadMessages: storedUnreadMessages,
+    subjects: !!storedSubjects,
+    grades: !!storedGrades,
+    attendance: !!storedAttendance
+  })
+  
+  if (storedUnreadMessages) {
+    setUnreadMessages(Number.parseInt(storedUnreadMessages, 10))
   }
+  
+  if (storedSubjects) {
+    try {
+      setSubjects(JSON.parse(storedSubjects))
+    } catch (error) {
+      console.error("Failed to parse subjects:", error)
+    }
+  }
+  
+  if (storedGrades) {
+    try {
+      setGrades(JSON.parse(storedGrades))
+    } catch (error) {
+      console.error("Failed to parse grades:", error)
+    }
+  }
+  
+  if (storedAttendance) {
+    try {
+      setAttendance(JSON.parse(storedAttendance))
+    } catch (error) {
+      console.error("Failed to parse attendance:", error)
+    }
+  }
+  
+  // Check if we have all the data we need
+  const hasAllData = !!storedUnreadMessages && (
+    (storedSubjects && JSON.parse(storedSubjects).length > 0) || 
+    (storedGrades && JSON.parse(storedGrades).length > 0) || 
+    (storedAttendance && JSON.parse(storedAttendance).length > 0)
+  );
+  
+  if (!hasAllData) {
+    // If data is missing, check if we have credentials to try loading again
+    const wilmaAuth = sessionStorage.getItem("wilmaAuth") || getCookieCredentials();
+    
+    if (wilmaAuth) {
+      console.log("Missing data, might need to reload from API");
+      // You could add logic here to prompt the user to reload or auto-reload
+    }
+  }
+  
+  setIsLoading(false)
+}, []);
+
+// Add a helper function to get credentials from cookies
+function getCookieCredentials() {
+  const getCookie = (name: string) => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return decodeURIComponent(parts.pop()?.split(';').shift() || '');
+    return '';
+  };
+  
+  const username = getCookie('wilmaUsername');
+  const password = getCookie('wilmaPassword');
+  
+  if (username && password) {
+    return JSON.stringify({ username, password });
+  }
+  return null;
+}
+
+// Modify the slides to handle missing data gracefully
+const getAverageGrade = (): string => {
+  if (!grades.length) return "N/A"
+  
+  let totalGrades = 0
+  let totalCount = 0
+  
+  grades.forEach(subjectGrades => {
+    subjectGrades.forEach(grade => {
+      totalGrades += grade
+      totalCount++
+    })
+  })
+  
+  return totalCount > 0 ? parseFloat((totalGrades / totalCount).toFixed(2)).toString() : "N/A"
+}
   
   const getBestSubject = (): { subject: string, average: number } => {
     if (!subjects.length || !grades.length) return { subject: "None", average: 0 }

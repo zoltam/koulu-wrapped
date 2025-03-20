@@ -26,13 +26,33 @@ export default function Wrapped() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Retrieve stored credentials
-        const wilmaAuth = JSON.parse(sessionStorage.getItem("wilmaAuth") || "{}")
-        console.log("Retrieved auth from session storage:", !!wilmaAuth.username, !!wilmaAuth.password)
+        // Retrieve stored credentials from sessionStorage first
+        let wilmaAuth = JSON.parse(sessionStorage.getItem("wilmaAuth") || "{}");
+        
+        // If not in sessionStorage, try to get from cookies
+        if (!wilmaAuth.username || !wilmaAuth.password) {
+          const getCookie = (name: string) => {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return decodeURIComponent(parts.pop()?.split(';').shift() || '');
+            return '';
+          };
+          
+          const username = getCookie('wilmaUsername');
+          const password = getCookie('wilmaPassword');
+          
+          if (username && password) {
+            wilmaAuth = { username, password };
+            // Restore to sessionStorage for this session
+            sessionStorage.setItem("wilmaAuth", JSON.stringify(wilmaAuth));
+          }
+        }
+        
+        console.log("Retrieved auth:", !!wilmaAuth.username, !!wilmaAuth.password);
         
         if (!wilmaAuth.username || !wilmaAuth.password) {
-          setError("Missing credentials. Please sign in again.")
-          return
+          setError("Missing credentials. Please sign in again.");
+          return;
         }
         
         // First load: unread messages
@@ -125,8 +145,6 @@ export default function Wrapped() {
         console.error("Loading failed:", error);
         setError(`An error occurred: ${(error as Error).message}`);
         setDebugInfo(JSON.stringify(error, null, 2));
-      } finally {
-        sessionStorage.removeItem("wilmaAuth");
       }
     }
 
