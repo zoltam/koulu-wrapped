@@ -7,7 +7,7 @@ export async function POST(request: Request) {
   let requestBody;
   try {
     requestBody = await request.json();
-    console.log("Request body:", JSON.stringify(requestBody, null, 2));
+    console.log("Request body (excluding password):", JSON.stringify({ ...requestBody, wilmaPassword: undefined }, null, 2));
   } catch (error) {
     console.error("Failed to parse request body:", error);
     return NextResponse.json(
