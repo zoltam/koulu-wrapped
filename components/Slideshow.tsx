@@ -33,6 +33,7 @@ export default function Slideshow() {
   const [grades, setGrades] = useState<number[][]>([])
   const [attendance, setAttendance] = useState<AttendanceData[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [slidesData, setSlidesData] = useState<any[]>([])
   
   // Helper functions
   const getAverageGrade = (): number => {
@@ -125,146 +126,7 @@ export default function Slideshow() {
     return { course: maxCourse, count: maxCount }
   }
 
-  // Define slides here, after the helper functions
-  const slides = [
-    {
-      id: 1,
-      content: (
-        <div className="text-center">
-          <h2 className="text-3xl font-bold mb-4 text-primary">Unread Messages</h2>
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 260, damping: 20 }}
-            className="text-6xl font-bold text-accent"
-          >
-            {unreadMessages}
-          </motion.div>
-          <p className="mt-4 text-xl text-muted-foreground">new messages waiting for you!</p>
-        </div>
-      ),
-    },
-    {
-      id: 2,
-      content: (
-        <div className="text-center">
-          <h2 className="text-3xl font-bold mb-4 text-primary">Your Average Grade</h2>
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 260, damping: 20 }}
-            className="text-6xl font-bold text-accent"
-          >
-            {getAverageGrade()}
-          </motion.div>
-          <p className="mt-4 text-xl text-muted-foreground">across all subjects</p>
-        </div>
-      )
-    },
-    {
-      id: 3,
-      content: (
-        <div className="text-center">
-          <h2 className="text-3xl font-bold mb-4 text-primary">Best Subject</h2>
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 260, damping: 20 }}
-            className="text-6xl font-bold text-accent"
-          >
-            {getBestSubject().subject}
-          </motion.div>
-          <p className="mt-4 text-xl text-muted-foreground">
-            with an average of {getBestSubject().average}
-          </p>
-        </div>
-      )
-    },
-    {
-      id: 4,
-      content: (
-        <div className="text-center">
-          <h2 className="text-3xl font-bold mb-4 text-primary">Total Absences</h2>
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 260, damping: 20 }}
-            className="text-6xl font-bold text-accent"
-          >
-            {getTotalAbsences()}
-          </motion.div>
-          <p className="mt-4 text-xl text-muted-foreground">
-            across all courses
-          </p>
-        </div>
-      )
-    },
-    {
-      id: 5,
-      content: (
-        <div className="text-center">
-          <h2 className="text-3xl font-bold mb-4 text-primary">Most Common Absence</h2>
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 260, damping: 20 }}
-            className="text-4xl font-bold text-accent"
-          >
-            {getMostCommonAbsenceType().type === "Terveydellisiin syihin liittyvä poissaolo" 
-              ? "Health-related" 
-              : getMostCommonAbsenceType().type === "Luvaton poissaolo (selvitetty)" 
-                ? "Unauthorized (resolved)" 
-                : getMostCommonAbsenceType().type === "Myöhässä alle 15 min" 
-                  ? "Late < 15 min" 
-                  : getMostCommonAbsenceType().type}
-          </motion.div>
-          <p className="mt-4 text-xl text-muted-foreground">
-            with {getMostCommonAbsenceType().count} occurrences
-          </p>
-        </div>
-      )
-    },
-    {
-      id: 6,
-      content: (
-        <div className="text-center">
-          <h2 className="text-3xl font-bold mb-4 text-primary">Course Most Absences</h2>
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 260, damping: 20 }}
-            className="text-4xl font-bold text-accent"
-          >
-            {getCourseMostAbsences().course}
-          </motion.div>
-          <p className="mt-4 text-xl text-muted-foreground">
-            with {getCourseMostAbsences().count} absences
-          </p>
-        </div>
-      )
-    },
-    {
-      id: 7,
-      content: (
-        <div className="text-center">
-          <h2 className="text-3xl font-bold mb-4 text-primary">Debug Info</h2>
-          <div className="text-left text-sm overflow-auto max-h-48">
-            <p>Subjects: {subjects.length}</p>
-            <p>Grades: {grades.length}</p>
-            <p>Attendance Records: {attendance.length}</p>
-            <pre className="bg-card p-2 rounded-md mt-2">
-              {JSON.stringify({ 
-                subjects: subjects.slice(0, 2), 
-                grades: grades.slice(0, 2),
-                attendance: attendance.slice(0, 2)
-              }, null, 2)}
-            </pre>
-          </div>
-        </div>
-      )
-    }
-  ]
-  
+  // Load data first
   useEffect(() => {
     // Retrieve data from sessionStorage
     const storedUnreadMessages = sessionStorage.getItem("unreadMessages")
@@ -309,13 +171,161 @@ export default function Slideshow() {
     }
     
     setIsLoading(false)
+  }, [])
 
+  // Create slides separately after data is loaded
+  useEffect(() => {
+    if (isLoading) return;
+    
+    // Define slides here, but only after data is loaded
+    const slides = [
+      {
+        id: 1,
+        content: (
+          <div className="text-center">
+            <h2 className="text-3xl font-bold mb-4 text-primary">Unread Messages</h2>
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 260, damping: 20 }}
+              className="text-6xl font-bold text-accent"
+            >
+              {unreadMessages}
+            </motion.div>
+            <p className="mt-4 text-xl text-muted-foreground">new messages waiting for you!</p>
+          </div>
+        ),
+      },
+      {
+        id: 2,
+        content: (
+          <div className="text-center">
+            <h2 className="text-3xl font-bold mb-4 text-primary">Your Average Grade</h2>
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 260, damping: 20 }}
+              className="text-6xl font-bold text-accent"
+            >
+              {getAverageGrade()}
+            </motion.div>
+            <p className="mt-4 text-xl text-muted-foreground">across all subjects</p>
+          </div>
+        )
+      },
+      {
+        id: 3,
+        content: (
+          <div className="text-center">
+            <h2 className="text-3xl font-bold mb-4 text-primary">Best Subject</h2>
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 260, damping: 20 }}
+              className="text-6xl font-bold text-accent"
+            >
+              {getBestSubject().subject}
+            </motion.div>
+            <p className="mt-4 text-xl text-muted-foreground">
+              with an average of {getBestSubject().average}
+            </p>
+          </div>
+        )
+      },
+      {
+        id: 4,
+        content: (
+          <div className="text-center">
+            <h2 className="text-3xl font-bold mb-4 text-primary">Total Absences</h2>
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 260, damping: 20 }}
+              className="text-6xl font-bold text-accent"
+            >
+              {getTotalAbsences()}
+            </motion.div>
+            <p className="mt-4 text-xl text-muted-foreground">
+              across all courses
+            </p>
+          </div>
+        )
+      },
+      {
+        id: 5,
+        content: (
+          <div className="text-center">
+            <h2 className="text-3xl font-bold mb-4 text-primary">Most Common Absence</h2>
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 260, damping: 20 }}
+              className="text-4xl font-bold text-accent"
+            >
+              {getMostCommonAbsenceType().type === "Terveydellisiin syihin liittyvä poissaolo" 
+                ? "Health-related" 
+                : getMostCommonAbsenceType().type === "Luvaton poissaolo (selvitetty)" 
+                  ? "Unauthorized (resolved)" 
+                  : getMostCommonAbsenceType().type === "Myöhässä alle 15 min" 
+                    ? "Late < 15 min" 
+                    : getMostCommonAbsenceType().type}
+            </motion.div>
+            <p className="mt-4 text-xl text-muted-foreground">
+              with {getMostCommonAbsenceType().count} occurrences
+            </p>
+          </div>
+        )
+      },
+      {
+        id: 6,
+        content: (
+          <div className="text-center">
+            <h2 className="text-3xl font-bold mb-4 text-primary">Course Most Absences</h2>
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 260, damping: 20 }}
+              className="text-4xl font-bold text-accent"
+            >
+              {getCourseMostAbsences().course}
+            </motion.div>
+            <p className="mt-4 text-xl text-muted-foreground">
+              with {getCourseMostAbsences().count} absences
+            </p>
+          </div>
+        )
+      },
+      {
+        id: 7,
+        content: (
+          <div className="text-center">
+            <h2 className="text-3xl font-bold mb-4 text-primary">Debug Info</h2>
+            <div className="text-left text-sm overflow-auto max-h-48">
+              <p>Subjects: {subjects.length}</p>
+              <p>Grades: {grades.length}</p>
+              <p>Attendance Records: {attendance.length}</p>
+              <pre className="bg-card p-2 rounded-md mt-2">
+                {JSON.stringify({ 
+                  subjects: subjects.slice(0, 2), 
+                  grades: grades.slice(0, 2),
+                  attendance: attendance.slice(0, 2)
+                }, null, 2)}
+              </pre>
+            </div>
+          </div>
+        )
+      }
+    ];
+    
+    setSlidesData(slides);
+    
+    // Start the slideshow timer only after data is loaded and slides are created
     const timer = setInterval(() => {
-      setCurrentSlide((prevSlide) => (prevSlide + 1) % slides.length)
-    }, 5000) // Change slide every 5 seconds
-
-    return () => clearInterval(timer)
-  }, [])  // Note: adding slides to the dependency array would cause infinite renders
+      setCurrentSlide((prevSlide) => (prevSlide + 1) % slides.length);
+    }, 5000); // Change slide every 5 seconds
+    
+    return () => clearInterval(timer);
+  }, [isLoading, unreadMessages, subjects, grades, attendance]);
   
   // Debug display of loaded data
   if (isLoading) {
@@ -323,16 +333,25 @@ export default function Slideshow() {
       <div className="flex items-center justify-center h-full">
         <p className="text-muted-foreground">Loading data...</p>
       </div>
-    )
+    );
+  }
+  
+  // Don't render until slides are created
+  if (slidesData.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <p className="text-muted-foreground">Preparing slideshow...</p>
+      </div>
+    );
   }
 
   return (
     <div className="relative w-full h-full bg-card rounded-lg shadow-lg p-6">
       <AnimatePresence mode="wait">
-        <Slide key={currentSlide} content={slides[currentSlide].content} />
+        <Slide key={currentSlide} content={slidesData[currentSlide].content} />
       </AnimatePresence>
       <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-2">
-        {slides.map((slide, index) => (
+        {slidesData.map((slide, index) => (
           <motion.div
             key={slide.id}
             className={`w-2 h-2 rounded-full ${index === currentSlide ? "bg-primary" : "bg-secondary"}`}
