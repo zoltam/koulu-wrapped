@@ -34,185 +34,21 @@ export default function Slideshow() {
   const [attendance, setAttendance] = useState<AttendanceData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [slidesData, setSlidesData] = useState<any[]>([])
-  
-  // Helper functions
-  // components/Slideshow.tsx - Improve data handling
 
-// Add a data loading retry mechanism
-useEffect(() => {
-  // Retrieve data from sessionStorage
-  const storedUnreadMessages = sessionStorage.getItem("unreadMessages")
-  const storedSubjects = sessionStorage.getItem("subjects")
-  const storedGrades = sessionStorage.getItem("grades")
-  const storedAttendance = sessionStorage.getItem("attendance")
-  
-  console.log("Retrieved from sessionStorage:", {
-    unreadMessages: storedUnreadMessages,
-    subjects: !!storedSubjects,
-    grades: !!storedGrades,
-    attendance: !!storedAttendance
-  })
-  
-  if (storedUnreadMessages) {
-    setUnreadMessages(Number.parseInt(storedUnreadMessages, 10))
-  }
-  
-  if (storedSubjects) {
-    try {
-      setSubjects(JSON.parse(storedSubjects))
-    } catch (error) {
-      console.error("Failed to parse subjects:", error)
-    }
-  }
-  
-  if (storedGrades) {
-    try {
-      setGrades(JSON.parse(storedGrades))
-    } catch (error) {
-      console.error("Failed to parse grades:", error)
-    }
-  }
-  
-  if (storedAttendance) {
-    try {
-      setAttendance(JSON.parse(storedAttendance))
-    } catch (error) {
-      console.error("Failed to parse attendance:", error)
-    }
-  }
-  
-  // Check if we have all the data we need
-  const hasAllData = !!storedUnreadMessages && (
-    (storedSubjects && JSON.parse(storedSubjects).length > 0) || 
-    (storedGrades && JSON.parse(storedGrades).length > 0) || 
-    (storedAttendance && JSON.parse(storedAttendance).length > 0)
-  );
-  
-  if (!hasAllData) {
-    // If data is missing, check if we have credentials to try loading again
-    const wilmaAuth = sessionStorage.getItem("wilmaAuth") || getCookieCredentials();
-    
-    if (wilmaAuth) {
-      console.log("Missing data, might need to reload from API");
-      // You could add logic here to prompt the user to reload or auto-reload
-    }
-  }
-  
-  setIsLoading(false)
-}, []);
-
-// Add a helper function to get credentials from cookies
-function getCookieCredentials() {
-  const getCookie = (name: string) => {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return decodeURIComponent(parts.pop()?.split(';').shift() || '');
-    return '';
-  };
-  
-  const username = getCookie('wilmaUsername');
-  const password = getCookie('wilmaPassword');
-  
-  if (username && password) {
-    return JSON.stringify({ username, password });
-  }
-  return null;
-}
-
-// Modify the slides to handle missing data gracefully
-const getAverageGrade = (): string => {
-  if (!grades.length) return "N/A"
-  
-  let totalGrades = 0
-  let totalCount = 0
-  
-  grades.forEach(subjectGrades => {
-    subjectGrades.forEach(grade => {
-      totalGrades += grade
-      totalCount++
-    })
-  })
-  
-  return totalCount > 0 ? parseFloat((totalGrades / totalCount).toFixed(2)).toString() : "N/A"
-}
-  
-  const getBestSubject = (): { subject: string, average: number } => {
-    if (!subjects.length || !grades.length) return { subject: "None", average: 0 }
-    
-    let bestAvg = 0
-    let bestSubject = ""
-    
-    subjects.forEach((subject, index) => {
-      if (grades[index] && grades[index].length) {
-        const avg = grades[index].reduce((sum, grade) => sum + grade, 0) / grades[index].length
-        if (avg > bestAvg) {
-          bestAvg = avg
-          bestSubject = subject
-        }
-      }
-    })
-    
-    return { subject: bestSubject || "None", average: parseFloat(bestAvg.toFixed(1)) }
-  }
-  
-  // Attendance helper functions
-  const getTotalAbsences = (): number => {
-    if (!attendance.length) return 0
-    
-    let total = 0
-    attendance.forEach(course => {
-      Object.values(course.marks).forEach(count => {
-        total += count
-      })
-    })
-    
-    return total
-  }
-  
-  const getMostCommonAbsenceType = (): { type: string, count: number } => {
-    if (!attendance.length) return { type: "None", count: 0 }
-    
-    const typeCount: { [key: string]: number } = {}
-    
-    attendance.forEach(course => {
-      Object.entries(course.marks).forEach(([type, count]) => {
-        typeCount[type] = (typeCount[type] || 0) + count
-      })
-    })
-    
-    let maxType = "None"
-    let maxCount = 0
-    
-    Object.entries(typeCount).forEach(([type, count]) => {
-      if (count > maxCount) {
-        maxType = type
-        maxCount = count
-      }
-    })
-    
-    return { type: maxType, count: maxCount }
-  }
-  
-  const getCourseMostAbsences = (): { course: string, count: number } => {
-    if (!attendance.length) return { course: "None", count: 0 }
-    
-    let maxCourse = "None"
-    let maxCount = 0
-    
-    attendance.forEach(course => {
-      const courseTotal = Object.values(course.marks).reduce((sum, count) => sum + count, 0)
-      if (courseTotal > maxCount) {
-        maxCount = courseTotal
-        maxCourse = course.courseCode
-      }
-    })
-    
-    return { course: maxCourse, count: maxCount }
-  }
-
-  // Load data first
   useEffect(() => {
-    // Retrieve data from sessionStorage
+    const getCookieCredentials = () => {
+      const getCookie = (name: string) => {
+        const value = `; ${document.cookie}`
+        const parts = value.split(`; ${name}=`)
+        if (parts.length === 2) return decodeURIComponent(parts.pop()?.split(';').shift() || '')
+        return ''
+      }
+      
+      const username = getCookie('wilmaUsername')
+      const password = getCookie('wilmaPassword')
+      return username && password ? { username, password } : null
+    }
+
     const storedUnreadMessages = sessionStorage.getItem("unreadMessages")
     const storedSubjects = sessionStorage.getItem("subjects")
     const storedGrades = sessionStorage.getItem("grades")
@@ -224,7 +60,7 @@ const getAverageGrade = (): string => {
       grades: !!storedGrades,
       attendance: !!storedAttendance
     })
-    
+
     if (storedUnreadMessages) {
       setUnreadMessages(Number.parseInt(storedUnreadMessages, 10))
     }
@@ -248,20 +84,119 @@ const getAverageGrade = (): string => {
     if (storedAttendance) {
       try {
         setAttendance(JSON.parse(storedAttendance))
-        console.log("Parsed attendance data:", JSON.parse(storedAttendance))
       } catch (error) {
         console.error("Failed to parse attendance:", error)
+      }
+    }
+
+    const hasAllData = !!storedUnreadMessages && (
+      (storedSubjects && JSON.parse(storedSubjects).length > 0) || 
+      (storedGrades && JSON.parse(storedGrades).length > 0) || 
+      (storedAttendance && JSON.parse(storedAttendance).length > 0)
+    )
+    
+    if (!hasAllData) {
+      const wilmaAuth = sessionStorage.getItem("wilmaAuth") || getCookieCredentials()
+      if (wilmaAuth) {
+        console.log("Missing data, might need to reload from API")
       }
     }
     
     setIsLoading(false)
   }, [])
 
-  // Create slides separately after data is loaded
-  useEffect(() => {
-    if (isLoading) return;
+  const getAverageGrade = (): string => {
+    if (!grades.length) return "N/A"
     
-    // Define slides here, but only after data is loaded
+    let totalGrades = 0
+    let totalCount = 0
+    
+    grades.forEach(subjectGrades => {
+      subjectGrades.forEach(grade => {
+        totalGrades += grade
+        totalCount++
+      })
+    })
+    
+    return totalCount > 0 ? parseFloat((totalGrades / totalCount).toFixed(2)).toString() : "N/A"
+  }
+
+  const getBestSubject = (): { subject: string, average: number } => {
+    if (!subjects.length || !grades.length) return { subject: "None", average: 0 }
+    
+    let bestAvg = 0
+    let bestSubject = ""
+    
+    subjects.forEach((subject, index) => {
+      if (grades[index] && grades[index].length) {
+        const avg = grades[index].reduce((sum, grade) => sum + grade, 0) / grades[index].length
+        if (avg > bestAvg) {
+          bestAvg = avg
+          bestSubject = subject
+        }
+      }
+    })
+    
+    return { subject: bestSubject || "None", average: parseFloat(bestAvg.toFixed(1)) }
+  }
+
+  const getTotalAbsences = (): number => {
+    if (!attendance.length) return 0
+    
+    let total = 0
+    attendance.forEach(course => {
+      Object.values(course.marks).forEach(count => {
+        total += count
+      })
+    })
+    
+    return total
+  }
+
+  const getMostCommonAbsenceType = (): { type: string, count: number } => {
+    if (!attendance.length) return { type: "None", count: 0 }
+    
+    const typeCount: { [key: string]: number } = {}
+    
+    attendance.forEach(course => {
+      Object.entries(course.marks).forEach(([type, count]) => {
+        typeCount[type] = (typeCount[type] || 0) + count
+      })
+    })
+    
+    let maxType = "None"
+    let maxCount = 0
+    
+    Object.entries(typeCount).forEach(([type, count]) => {
+      if (count > maxCount) {
+        maxType = type
+        maxCount = count
+      }
+    })
+    
+    return { type: maxType, count: maxCount }
+  }
+
+  const getCourseMostAbsences = (): { course: string, count: number } => {
+    if (!attendance.length) return { course: "None", count: 0 }
+    
+    let maxCourse = "None"
+    let maxCount = 0
+    
+    attendance.forEach(course => {
+      const courseTotal = Object.values(course.marks).reduce((sum, count) => sum + count, 0)
+      if (courseTotal > maxCount) {
+        maxCount = courseTotal
+        maxCourse = course.courseCode
+      }
+    })
+    
+    return { course: maxCourse, count: maxCount }
+  }
+
+  useEffect(() => {
+    if (isLoading) return
+    
     const slides = [
       {
         id: 1,
@@ -399,34 +334,31 @@ const getAverageGrade = (): string => {
           </div>
         )
       }
-    ];
+    ]
     
-    setSlidesData(slides);
+    setSlidesData(slides)
     
-    // Start the slideshow timer only after data is loaded and slides are created
     const timer = setInterval(() => {
-      setCurrentSlide((prevSlide) => (prevSlide + 1) % slides.length);
-    }, 5000); // Change slide every 5 seconds
+      setCurrentSlide((prevSlide) => (prevSlide + 1) % slides.length)
+    }, 5000)
     
-    return () => clearInterval(timer);
-  }, [isLoading, unreadMessages, subjects, grades, attendance]);
-  
-  // Debug display of loaded data
+    return () => clearInterval(timer)
+  }, [isLoading, unreadMessages, subjects, grades, attendance])
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <p className="text-muted-foreground">Loading data...</p>
       </div>
-    );
+    )
   }
-  
-  // Don't render until slides are created
+
   if (slidesData.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
         <p className="text-muted-foreground">Preparing slideshow...</p>
       </div>
-    );
+    )
   }
 
   return (
