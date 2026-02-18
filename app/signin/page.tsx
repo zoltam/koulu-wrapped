@@ -14,36 +14,22 @@ export default function SignIn() {
   const [error, setError] = useState("")
   const router = useRouter()
 
-  // app/signin/page.tsx - Update the handleSubmit function
-
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault()
   setIsLoading(true)
   setError("")
 
   try {
-    const response = await fetch("/api/connect-wilma", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ wilmaUsername: username, wilmaPassword: password }),
-    })
-    const data = await response.json()
-    if (data.success) {
-      // Store the auth in both sessionStorage and a cookie for persistence
-      sessionStorage.setItem("wilmaAuth", JSON.stringify({
-        username,
-        password
-      }));
-      
-      // Set a cookie that expires in 24 hours
-      document.cookie = `wilmaUsername=${encodeURIComponent(username)};path=/;max-age=86400`;
-      document.cookie = `wilmaPassword=${encodeURIComponent(password)};path=/;max-age=86400`;
-      
-      router.push("/wrapped?loading=true");
-    } else {
-      setError("Failed to connect to Wilma. Please check your credentials.")
-    }
-  } catch (error) {
+    sessionStorage.setItem("wilmaAuth", JSON.stringify({
+      username,
+      password
+    }));
+
+    document.cookie = `wilmaUsername=${encodeURIComponent(username)};path=/;max-age=86400`;
+    document.cookie = `wilmaPassword=${encodeURIComponent(password)};path=/;max-age=86400`;
+
+    router.push("/wrapped?loading=true");
+  } catch (_error) {
     setError("An unexpected error occurred. Please try again.")
   } finally {
     setIsLoading(false)

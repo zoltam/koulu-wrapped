@@ -13,145 +13,140 @@ interface AttendanceData {
   };
 }
 
+interface WrappedDataResponse {
+  success: boolean;
+  unreadMessages?: number;
+  subjects?: string[];
+  grades?: number[][];
+  attendance?: AttendanceData[];
+  error?: string;
+  details?: string;
+  status?: number;
+}
+
+let activeLoadPromise: Promise<WrappedDataResponse> | null = null
+let activeLoadKey: string | null = null
+
+async function loadWrappedData(wilmaUsername: string, wilmaPassword: string): Promise<WrappedDataResponse> {
+  const requestKey = `${wilmaUsername}::${wilmaPassword}`
+
+  if (activeLoadPromise && activeLoadKey === requestKey) {
+    return activeLoadPromise
+  }
+
+  activeLoadKey = requestKey
+  activeLoadPromise = (async () => {
+    const response = await fetch("/api/connect-wilma", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ wilmaUsername, wilmaPassword }),
+    })
+
+    const payload = await response.json().catch(() => ({
+      success: false,
+      error: "Invalid server response",
+    }))
+
+    if (!response.ok) {
+      return {
+        ...payload,
+        success: false,
+        status: response.status,
+      }
+    }
+
+    return payload
+  })().finally(() => {
+    activeLoadPromise = null
+    activeLoadKey = null
+  })
+
+  return activeLoadPromise
+}
+
+function getLoadingMessage(progress: number): string {
+  if (progress < 33) return "Finalizing login..."
+  if (progress < 66) return "Analyzing your grades..."
+  return "Checking your attendance..."
+}
+
 export default function Wrapped() {
   const [loadProgress, setLoadProgress] = useState(0)
-  const [unreadMessages, setUnreadMessages] = useState(0)
-  const [subjects, setSubjects] = useState<string[]>([])
-  const [grades, setGrades] = useState<number[][]>([])
-  const [attendanceData, setAttendanceData] = useState<AttendanceData[]>([])
   const [error, setError] = useState<string | null>(null)
   const [debugInfo, setDebugInfo] = useState<string | null>(null)
   const searchParams = useSearchParams()
 
   useEffect(() => {
+    const shouldLoad = searchParams.get("loading") === "true"
+    if (!shouldLoad) return
+
+    let cancelled = false
+    const progressTimer = window.setInterval(() => {
+      setLoadProgress((prev) => {
+        if (prev >= 90) return prev
+        if (prev < 33) return prev + 4
+        if (prev < 66) return prev + 3
+        return prev + 2
+      })
+    }, 250)
+
     const loadData = async () => {
       try {
-        // Retrieve stored credentials from sessionStorage first
-        let wilmaAuth = JSON.parse(sessionStorage.getItem("wilmaAuth") || "{}");
-        
-        // If not in sessionStorage, try to get from cookies
+        let wilmaAuth = JSON.parse(sessionStorage.getItem("wilmaAuth") || "{}")
+
         if (!wilmaAuth.username || !wilmaAuth.password) {
           const getCookie = (name: string) => {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return decodeURIComponent(parts.pop()?.split(';').shift() || '');
-            return '';
-          };
-          
-          const username = getCookie('wilmaUsername');
-          const password = getCookie('wilmaPassword');
-          
+            const value = `; ${document.cookie}`
+            const parts = value.split(`; ${name}=`)
+            if (parts.length === 2) return decodeURIComponent(parts.pop()?.split(';').shift() || '')
+            return ''
+          }
+
+          const username = getCookie('wilmaUsername')
+          const password = getCookie('wilmaPassword')
+
           if (username && password) {
-            wilmaAuth = { username, password };
-            // Restore to sessionStorage for this session
-            sessionStorage.setItem("wilmaAuth", JSON.stringify(wilmaAuth));
+            wilmaAuth = { username, password }
+            sessionStorage.setItem("wilmaAuth", JSON.stringify(wilmaAuth))
           }
         }
-        
-        console.log("Retrieved auth:", !!wilmaAuth.username, !!wilmaAuth.password);
-        
+
         if (!wilmaAuth.username || !wilmaAuth.password) {
-          setError("Missing credentials. Please sign in again.");
-          return;
+          setError("Missing credentials. Please sign in again.")
+          return
         }
-        
-        // First load: unread messages
-        console.log("Fetching unread messages...")
-        const res1 = await fetch("/api/connect-wilma", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            wilmaUsername: wilmaAuth.username,
-            wilmaPassword: wilmaAuth.password,
-            step: "unread"
-          })
-        });
-        
-        if (!res1.ok) {
-          const errorData = await res1.json();
-          console.error("Unread messages fetch failed:", errorData);
-          setError(`Failed to fetch unread messages: ${errorData.error || res1.status}`);
-          setDebugInfo(JSON.stringify(errorData, null, 2));
-          return;
+
+        const data = await loadWrappedData(wilmaAuth.username, wilmaAuth.password)
+        if (cancelled) return
+
+        if (!data.success) {
+          setError(data.error || `Failed to load wrapped data${data.status ? ` (${data.status})` : ""}`)
+          setDebugInfo(JSON.stringify(data, null, 2))
+          return
         }
-        
-        const unreadData = await res1.json();
-        console.log("Unread messages response:", unreadData);
-        setUnreadMessages(unreadData.unreadMessages || 0);
-        setLoadProgress(33);
-        
-        // Add unread messages to sessionStorage
-        sessionStorage.setItem("unreadMessages", String(unreadData.unreadMessages || 0));
 
-        // Second load: grades data
-        console.log("Fetching grades data...")
-        const res2 = await fetch("/api/connect-wilma", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            wilmaUsername: wilmaAuth.username,
-            wilmaPassword: wilmaAuth.password,
-            step: "grades"
-          })
-        });
-        
-        if (!res2.ok) {
-          const errorData = await res2.json();
-          console.error("Grades fetch failed:", errorData);
-          setError(`Failed to fetch grades: ${errorData.error || res2.status}`);
-          setDebugInfo(JSON.stringify(errorData, null, 2));
-          return;
-        }
-        
-        const gradesData = await res2.json();
-        console.log("Grades response:", gradesData);
-        setSubjects(gradesData.subjects || []);
-        setGrades(gradesData.grades || []);
-        setLoadProgress(66);
+        sessionStorage.setItem("unreadMessages", String(data.unreadMessages || 0))
+        sessionStorage.setItem("subjects", JSON.stringify(data.subjects || []))
+        sessionStorage.setItem("grades", JSON.stringify(data.grades || []))
+        sessionStorage.setItem("attendance", JSON.stringify(data.attendance || []))
 
-        // Add grades to sessionStorage
-        sessionStorage.setItem("subjects", JSON.stringify(gradesData.subjects || []));
-        sessionStorage.setItem("grades", JSON.stringify(gradesData.grades || []));
-
-        // Third load: attendance data
-        console.log("Fetching attendance data...")
-        const res3 = await fetch("/api/connect-wilma", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            wilmaUsername: wilmaAuth.username,
-            wilmaPassword: wilmaAuth.password,
-            step: "attendance"
-          })
-        });
-        
-        if (!res3.ok) {
-          const errorData = await res3.json();
-          console.error("Attendance fetch failed:", errorData);
-          setError(`Failed to fetch attendance: ${errorData.error || res3.status}`);
-          setDebugInfo(JSON.stringify(errorData, null, 2));
-          return;
-        }
-        
-        const attendanceData = await res3.json();
-        console.log("Attendance response:", attendanceData);
-        setAttendanceData(attendanceData.attendance || []);
-        setLoadProgress(100);
-
-        // Add attendance to sessionStorage
-        sessionStorage.setItem("attendance", JSON.stringify(attendanceData.attendance || []));
-
+        setLoadProgress(100)
       } catch (error) {
-        console.error("Loading failed:", error);
-        setError(`An error occurred: ${(error as Error).message}`);
-        setDebugInfo(JSON.stringify(error, null, 2));
+        if (cancelled) return
+        setError(`An error occurred: ${(error as Error).message}`)
+        setDebugInfo(JSON.stringify(error, null, 2))
+      } finally {
+        window.clearInterval(progressTimer)
       }
     }
 
-    if (searchParams.get("loading")) {
-      loadData();
+    loadData()
+
+    return () => {
+      cancelled = true
+      window.clearInterval(progressTimer)
     }
-  }, [searchParams]);
+  }, [searchParams])
 
   if (error) {
     return (
@@ -162,7 +157,7 @@ export default function Wrapped() {
           <pre className="p-4 bg-card text-sm overflow-auto max-h-64 rounded-md">
             {debugInfo}
           </pre>
-          <button 
+          <button
             onClick={() => window.location.href = '/signin'}
             className="mt-4 px-4 py-2 bg-secondary text-secondary-foreground rounded-md"
           >
@@ -170,7 +165,7 @@ export default function Wrapped() {
           </button>
         </div>
       </div>
-    );
+    )
   }
 
   if (loadProgress < 100) {
@@ -186,9 +181,7 @@ export default function Wrapped() {
             />
           </div>
           <motion.p className="text-center text-muted-foreground">
-            {loadProgress < 33 ? "Finalizing login..." : 
-             loadProgress < 66 ? "Analyzing your grades..." : 
-             "Checking your attendance..."}
+            {getLoadingMessage(loadProgress)}
           </motion.p>
         </motion.div>
       </div>
