@@ -55,12 +55,14 @@ export default function SignIn() {
             {error}
           </motion.div>
         )}
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} autoComplete="off" className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="username">{"K\u00E4ytt\u00E4j\u00E4tunnus"}</Label>
             <Input
               id="username"
               type="text"
+              autoComplete="off"
+              data-1p-ignore="true"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
@@ -72,6 +74,8 @@ export default function SignIn() {
             <Input
               id="password"
               type="password"
+              autoComplete="new-password"
+              data-1p-ignore="true"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
