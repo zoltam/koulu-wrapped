@@ -1,5 +1,10 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import puppeteer, { Page } from "puppeteer";
+
+interface UserProfile {
+  name: string | null;
+  school: string | null;
+}
 
 export async function POST(request: Request) {
   const requestId = `wilma-${Date.now().toString(36)}`;
@@ -57,15 +62,17 @@ export async function POST(request: Request) {
       );
     }
 
+    const userProfile = await getUserProfile(page);
+
     if (mode === "unread") {
       const unreadMessages = await getUnreadMessages(page);
-      return NextResponse.json({ success: true, unreadMessages });
+      return NextResponse.json({ success: true, unreadMessages, userProfile });
     }
 
     if (mode === "grades") {
       await page.goto("https://yvkoulut.inschool.fi/choices", { waitUntil: "domcontentloaded" });
       const { subjects, grades } = await getGradesData(page);
-      return NextResponse.json({ success: true, subjects, grades });
+      return NextResponse.json({ success: true, subjects, grades, userProfile });
     }
 
     if (mode === "attendance") {
@@ -73,7 +80,7 @@ export async function POST(request: Request) {
         waitUntil: "domcontentloaded",
       });
       const attendance = await getAttendanceData(page);
-      return NextResponse.json({ success: true, attendance });
+      return NextResponse.json({ success: true, attendance, userProfile });
     }
 
     const unreadMessages = await getUnreadMessages(page);
@@ -92,6 +99,7 @@ export async function POST(request: Request) {
       subjects,
       grades,
       attendance,
+      userProfile,
     });
   } catch (error) {
     console.error(`[${requestId}] Failed scrape`, error);
@@ -105,6 +113,29 @@ export async function POST(request: Request) {
     }
     const durationMs = Date.now() - startedAt;
     console.log(`[${requestId}] Finished ${mode} scrape in ${durationMs}ms`);
+  }
+}
+
+async function getUserProfile(page: Page): Promise<UserProfile> {
+  try {
+    await page.waitForSelector(".dropdown-toggle.profile .name-container", { timeout: 10000 });
+
+    return await page.evaluate(() => {
+      const name = document
+        .querySelector(".dropdown-toggle.profile .name-container .teacher")
+        ?.textContent?.trim();
+      const school = document
+        .querySelector(".dropdown-toggle.profile .name-container .school")
+        ?.textContent?.trim();
+
+      return {
+        name: name || null,
+        school: school || null,
+      };
+    });
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    return { name: null, school: null };
   }
 }
 
@@ -230,4 +261,3 @@ async function getAttendanceData(page: Page): Promise<AttendanceData[]> {
     return [];
   }
 }
-

@@ -13,12 +13,18 @@ interface AttendanceData {
   };
 }
 
+interface UserProfile {
+  name: string | null;
+  school: string | null;
+}
+
 interface WrappedDataResponse {
   success: boolean;
   unreadMessages?: number;
   subjects?: string[];
   grades?: number[][];
   attendance?: AttendanceData[];
+  userProfile?: UserProfile;
   error?: string;
   details?: string;
   status?: number;
@@ -129,6 +135,7 @@ export default function Wrapped() {
         sessionStorage.setItem("subjects", JSON.stringify(data.subjects || []))
         sessionStorage.setItem("grades", JSON.stringify(data.grades || []))
         sessionStorage.setItem("attendance", JSON.stringify(data.attendance || []))
+        sessionStorage.setItem("userProfile", JSON.stringify(data.userProfile || null))
 
         setLoadProgress(100)
       } catch (error) {

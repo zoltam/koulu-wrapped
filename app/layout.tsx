@@ -1,13 +1,13 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import type React from "react"; // Import React
+import type React from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Koulu Wrapped",
-  description: "Your school year wrapped up, Spotify-style!",
+  title: "Lukio Wrapped",
+  description: "Lukuvuotesi kohokohdat Wrapped-tyyliin.",
 };
 
 export default function RootLayout({
@@ -16,8 +16,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="fi">
       <body className={inter.className}>{children}</body>
     </html>
   );
 }
+
