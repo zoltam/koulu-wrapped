@@ -1,382 +1,272 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-
-interface SlideProps {
-  content: React.ReactNode
-}
+import { useEffect, useMemo, useRef, useState } from "react"
+import { motion, useScroll, useTransform } from "framer-motion"
 
 interface AttendanceData {
-  courseCode: string;
+  courseCode: string
   marks: {
-    [key: string]: number;
-  };
+    [key: string]: number
+  }
 }
 
-const Slide: React.FC<SlideProps> = ({ content }) => (
-  <motion.div
-    initial={{ opacity: 0, x: 50 }}
-    animate={{ opacity: 1, x: 0 }}
-    exit={{ opacity: 0, x: -50 }}
-    transition={{ duration: 0.5 }}
-    className="absolute inset-0 flex items-center justify-center"
-  >
-    {content}
-  </motion.div>
-)
+interface UserProfile {
+  name: string | null
+  school: string | null
+}
+
+interface WrappedSnapshot {
+  unreadMessages: number
+  subjects: string[]
+  grades: number[][]
+  attendance: AttendanceData[]
+  userProfile: UserProfile | null
+}
+
+interface SlideData {
+  id: string
+  kicker: string
+  title: string
+  highlight?: string
+  description: string
+  badge?: string
+  accentFrom: string
+  accentVia: string
+  accentTo: string
+}
+
+function safeParseArray<T>(raw: string | null, fallback: T): T {
+  if (!raw) return fallback
+  try {
+    return JSON.parse(raw) as T
+  } catch {
+    return fallback
+  }
+}
+
+function getFirstName(fullName: string | null | undefined): string {
+  if (!fullName) return "ystava"
+  const first = fullName.trim().split(/\s+/)[0]
+  return first || "ystava"
+}
+
+function getAverageGrade(grades: number[][]): string {
+  const flat = grades.flat()
+  if (!flat.length) return "N/A"
+  const avg = flat.reduce((sum, value) => sum + value, 0) / flat.length
+  return avg.toFixed(1)
+}
+
+function getBestSubject(subjects: string[], grades: number[][]): string {
+  if (!subjects.length || !grades.length) return "Ei dataa"
+
+  let bestName = "Ei dataa"
+  let bestAverage = -1
+
+  subjects.forEach((subject, index) => {
+    const subjectGrades = grades[index] || []
+    if (!subjectGrades.length) return
+
+    const avg = subjectGrades.reduce((sum, value) => sum + value, 0) / subjectGrades.length
+    if (avg > bestAverage) {
+      bestAverage = avg
+      bestName = subject
+    }
+  })
+
+  return bestName
+}
+
+function getTotalAbsences(attendance: AttendanceData[]): number {
+  return attendance.reduce((total, course) => {
+    const courseTotal = Object.values(course.marks).reduce((sum, count) => sum + count, 0)
+    return total + courseTotal
+  }, 0)
+}
+
+function SlidePanel({ slide }: { slide: SlideData }) {
+  const panelRef = useRef<HTMLElement | null>(null)
+  const { scrollYProgress } = useScroll({
+    target: panelRef,
+    offset: ["start end", "end start"],
+  })
+
+  const cardOpacity = useTransform(scrollYProgress, [0.1, 0.3, 0.75, 0.95], [0, 1, 1, 0])
+  const cardY = useTransform(scrollYProgress, [0.1, 0.45, 0.9], [120, 0, -120])
+  const cardScale = useTransform(scrollYProgress, [0.1, 0.45, 0.9], [0.92, 1, 0.95])
+
+  return (
+    <section ref={panelRef} className="relative h-[130vh]">
+      <div className="sticky top-0 flex h-screen items-center justify-center px-4 py-8 sm:px-8">
+        <motion.article
+          style={{ opacity: cardOpacity, y: cardY, scale: cardScale }}
+          className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-white/20 bg-white/10 p-7 shadow-[0_20px_80px_rgba(0,0,0,0.4)] backdrop-blur-xl"
+        >
+          <div className={`pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-gradient-to-br ${slide.accentFrom} ${slide.accentVia} ${slide.accentTo} opacity-80 blur-2xl`} />
+          <div className={`pointer-events-none absolute -bottom-16 -left-16 h-44 w-44 rounded-full bg-gradient-to-br ${slide.accentTo} ${slide.accentVia} ${slide.accentFrom} opacity-70 blur-2xl`} />
+
+          <div className="relative">
+            <motion.p
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, amount: 0.5 }}
+              transition={{ duration: 0.5 }}
+              className="text-xs font-semibold uppercase tracking-[0.22em] text-white/70"
+            >
+              {slide.kicker}
+            </motion.p>
+
+            <motion.h2
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, amount: 0.5 }}
+              transition={{ duration: 0.6, delay: 0.05 }}
+              className="mt-4 text-4xl font-black leading-[1.02] tracking-tight sm:text-5xl"
+            >
+              {slide.title}
+            </motion.h2>
+
+            {slide.highlight && (
+              <motion.p
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: false, amount: 0.5 }}
+                transition={{ type: "spring", stiffness: 180, damping: 16, delay: 0.12 }}
+                className="mt-5 text-3xl font-black tracking-tight text-[#9fdbff] sm:text-4xl"
+              >
+                {slide.highlight}
+              </motion.p>
+            )}
+
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, amount: 0.5 }}
+              transition={{ duration: 0.55, delay: 0.15 }}
+              className="mt-5 text-base text-white/85"
+            >
+              {slide.description}
+            </motion.p>
+
+            {slide.badge && (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: false, amount: 0.5 }}
+                transition={{ duration: 0.45, delay: 0.2 }}
+                className="mt-5 inline-flex items-center rounded-full border border-white/25 bg-white/10 px-4 py-2 text-sm font-medium text-white/90"
+              >
+                {slide.badge}
+              </motion.div>
+            )}
+          </div>
+        </motion.article>
+      </div>
+    </section>
+  )
+}
 
 export default function Slideshow() {
-  const [currentSlide, setCurrentSlide] = useState(0)
-  const [unreadMessages, setUnreadMessages] = useState(0)
-  const [subjects, setSubjects] = useState<string[]>([])
-  const [grades, setGrades] = useState<number[][]>([])
-  const [attendance, setAttendance] = useState<AttendanceData[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [slidesData, setSlidesData] = useState<any[]>([])
+  const [snapshot, setSnapshot] = useState<WrappedSnapshot>({
+    unreadMessages: 0,
+    subjects: [],
+    grades: [],
+    attendance: [],
+    userProfile: null,
+  })
 
   useEffect(() => {
-    const getCookieCredentials = () => {
-      const getCookie = (name: string) => {
-        const value = `; ${document.cookie}`
-        const parts = value.split(`; ${name}=`)
-        if (parts.length === 2) return decodeURIComponent(parts.pop()?.split(';').shift() || '')
-        return ''
-      }
-      
-      const username = getCookie('wilmaUsername')
-      const password = getCookie('wilmaPassword')
-      return username && password ? { username, password } : null
-    }
+    const unreadMessages = Number.parseInt(sessionStorage.getItem("unreadMessages") || "0", 10)
+    const subjects = safeParseArray<string[]>(sessionStorage.getItem("subjects"), [])
+    const grades = safeParseArray<number[][]>(sessionStorage.getItem("grades"), [])
+    const attendance = safeParseArray<AttendanceData[]>(sessionStorage.getItem("attendance"), [])
+    const userProfile = safeParseArray<UserProfile | null>(sessionStorage.getItem("userProfile"), null)
 
-    const storedUnreadMessages = sessionStorage.getItem("unreadMessages")
-    const storedSubjects = sessionStorage.getItem("subjects")
-    const storedGrades = sessionStorage.getItem("grades")
-    const storedAttendance = sessionStorage.getItem("attendance")
-    
-    console.log("Retrieved from sessionStorage:", {
-      unreadMessages: storedUnreadMessages,
-      subjects: !!storedSubjects,
-      grades: !!storedGrades,
-      attendance: !!storedAttendance
-    })
-
-    if (storedUnreadMessages) {
-      setUnreadMessages(Number.parseInt(storedUnreadMessages, 10))
-    }
-    
-    if (storedSubjects) {
-      try {
-        setSubjects(JSON.parse(storedSubjects))
-      } catch (error) {
-        console.error("Failed to parse subjects:", error)
-      }
-    }
-    
-    if (storedGrades) {
-      try {
-        setGrades(JSON.parse(storedGrades))
-      } catch (error) {
-        console.error("Failed to parse grades:", error)
-      }
-    }
-    
-    if (storedAttendance) {
-      try {
-        setAttendance(JSON.parse(storedAttendance))
-      } catch (error) {
-        console.error("Failed to parse attendance:", error)
-      }
-    }
-
-    const hasAllData = !!storedUnreadMessages && (
-      (storedSubjects && JSON.parse(storedSubjects).length > 0) || 
-      (storedGrades && JSON.parse(storedGrades).length > 0) || 
-      (storedAttendance && JSON.parse(storedAttendance).length > 0)
-    )
-    
-    if (!hasAllData) {
-      const wilmaAuth = sessionStorage.getItem("wilmaAuth") || getCookieCredentials()
-      if (wilmaAuth) {
-        console.log("Missing data, might need to reload from API")
-      }
-    }
-    
+    setSnapshot({ unreadMessages, subjects, grades, attendance, userProfile })
     setIsLoading(false)
   }, [])
 
-  const getAverageGrade = (): string => {
-    if (!grades.length) return "N/A"
-    
-    let totalGrades = 0
-    let totalCount = 0
-    
-    grades.forEach(subjectGrades => {
-      subjectGrades.forEach(grade => {
-        totalGrades += grade
-        totalCount++
-      })
-    })
-    
-    return totalCount > 0 ? parseFloat((totalGrades / totalCount).toFixed(2)).toString() : "N/A"
-  }
+  const slides = useMemo<SlideData[]>(() => {
+    const firstName = getFirstName(snapshot.userProfile?.name)
+    const school = snapshot.userProfile?.school || "Koulu"
+    const averageGrade = getAverageGrade(snapshot.grades)
+    const bestSubject = getBestSubject(snapshot.subjects, snapshot.grades)
+    const totalAbsences = getTotalAbsences(snapshot.attendance)
 
-  const getBestSubject = (): { subject: string, average: number } => {
-    if (!subjects.length || !grades.length) return { subject: "None", average: 0 }
-    
-    let bestAvg = 0
-    let bestSubject = ""
-    
-    subjects.forEach((subject, index) => {
-      if (grades[index] && grades[index].length) {
-        const avg = grades[index].reduce((sum, grade) => sum + grade, 0) / grades[index].length
-        if (avg > bestAvg) {
-          bestAvg = avg
-          bestSubject = subject
-        }
-      }
-    })
-    
-    return { subject: bestSubject || "None", average: parseFloat(bestAvg.toFixed(1)) }
-  }
-
-  const getTotalAbsences = (): number => {
-    if (!attendance.length) return 0
-    
-    let total = 0
-    attendance.forEach(course => {
-      Object.values(course.marks).forEach(count => {
-        total += count
-      })
-    })
-    
-    return total
-  }
-
-  const getMostCommonAbsenceType = (): { type: string, count: number } => {
-    if (!attendance.length) return { type: "None", count: 0 }
-    
-    const typeCount: { [key: string]: number } = {}
-    
-    attendance.forEach(course => {
-      Object.entries(course.marks).forEach(([type, count]) => {
-        typeCount[type] = (typeCount[type] || 0) + count
-      })
-    })
-    
-    let maxType = "None"
-    let maxCount = 0
-    
-    Object.entries(typeCount).forEach(([type, count]) => {
-      if (count > maxCount) {
-        maxType = type
-        maxCount = count
-      }
-    })
-    
-    return { type: maxType, count: maxCount }
-  }
-
-  const getCourseMostAbsences = (): { course: string, count: number } => {
-    if (!attendance.length) return { course: "None", count: 0 }
-    
-    let maxCourse = "None"
-    let maxCount = 0
-    
-    attendance.forEach(course => {
-      const courseTotal = Object.values(course.marks).reduce((sum, count) => sum + count, 0)
-      if (courseTotal > maxCount) {
-        maxCount = courseTotal
-        maxCourse = course.courseCode
-      }
-    })
-    
-    return { course: maxCourse, count: maxCount }
-  }
-
-  useEffect(() => {
-    if (isLoading) return
-    
-    const slides = [
+    return [
       {
-        id: 1,
-        content: (
-          <div className="text-center">
-            <h2 className="text-3xl font-bold mb-4 text-primary">Unread Messages</h2>
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 260, damping: 20 }}
-              className="text-6xl font-bold text-accent"
-            >
-              {unreadMessages}
-            </motion.div>
-            <p className="mt-4 text-xl text-muted-foreground">new messages waiting for you!</p>
-          </div>
-        ),
+        id: "intro",
+        kicker: "Lukio Wrapped 2026",
+        title: `Hei ${firstName}, Lukio Wrappedisi on valmis.`,
+        description: "Skrollaa alas ja katso millainen lukuvuosi sinulla oli.",
+        badge: school,
+        accentFrom: "from-[#00c2ff]/80",
+        accentVia: "via-[#2d7eff]/70",
+        accentTo: "to-[#ff5f9e]/80",
       },
       {
-        id: 2,
-        content: (
-          <div className="text-center">
-            <h2 className="text-3xl font-bold mb-4 text-primary">Your Average Grade</h2>
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 260, damping: 20 }}
-              className="text-6xl font-bold text-accent"
-            >
-              {getAverageGrade()}
-            </motion.div>
-            <p className="mt-4 text-xl text-muted-foreground">across all subjects</p>
-          </div>
-        )
+        id: "messages",
+        kicker: "Viestit",
+        title: "Inboksisi ei ollut hiljainen.",
+        highlight: `${snapshot.unreadMessages}`,
+        description: "lukematonta viestia odotti sinua Wilmassa.",
+        accentFrom: "from-[#23d6ff]/80",
+        accentVia: "via-[#2f7cff]/70",
+        accentTo: "to-[#89f5ff]/80",
       },
       {
-        id: 3,
-        content: (
-          <div className="text-center">
-            <h2 className="text-3xl font-bold mb-4 text-primary">Best Subject</h2>
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 260, damping: 20 }}
-              className="text-6xl font-bold text-accent"
-            >
-              {getBestSubject().subject}
-            </motion.div>
-            <p className="mt-4 text-xl text-muted-foreground">
-              with an average of {getBestSubject().average}
-            </p>
-          </div>
-        )
+        id: "grades",
+        kicker: "Arvosanat",
+        title: "Kurssien keskiarvo",
+        highlight: averageGrade,
+        description: "Tama kertoo koko lukuvuoden tasaisesta tekemisesta.",
+        accentFrom: "from-[#4bd0ff]/80",
+        accentVia: "via-[#1a82d6]/70",
+        accentTo: "to-[#1a4bff]/80",
       },
       {
-        id: 4,
-        content: (
-          <div className="text-center">
-            <h2 className="text-3xl font-bold mb-4 text-primary">Total Absences</h2>
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 260, damping: 20 }}
-              className="text-6xl font-bold text-accent"
-            >
-              {getTotalAbsences()}
-            </motion.div>
-            <p className="mt-4 text-xl text-muted-foreground">
-              across all courses
-            </p>
-          </div>
-        )
+        id: "best-subject",
+        kicker: "Vahvin aine",
+        title: "Paras aineesi oli",
+        highlight: bestSubject,
+        description: "Tassa aineessa sait lukuvuoden parhaat keskiarvot.",
+        accentFrom: "from-[#ff7aa8]/80",
+        accentVia: "via-[#6f7eff]/70",
+        accentTo: "to-[#4dd3ff]/80",
       },
       {
-        id: 5,
-        content: (
-          <div className="text-center">
-            <h2 className="text-3xl font-bold mb-4 text-primary">Most Common Absence</h2>
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 260, damping: 20 }}
-              className="text-4xl font-bold text-accent"
-            >
-              {getMostCommonAbsenceType().type === "Terveydellisiin syihin liittyvä poissaolo" 
-                ? "Health-related" 
-                : getMostCommonAbsenceType().type === "Luvaton poissaolo (selvitetty)" 
-                  ? "Unauthorized (resolved)" 
-                  : getMostCommonAbsenceType().type === "Myöhässä alle 15 min" 
-                    ? "Late < 15 min" 
-                    : getMostCommonAbsenceType().type}
-            </motion.div>
-            <p className="mt-4 text-xl text-muted-foreground">
-              with {getMostCommonAbsenceType().count} occurrences
-            </p>
-          </div>
-        )
+        id: "attendance",
+        kicker: "Poissaolot",
+        title: "Poissaoloja yhteensa",
+        highlight: `${totalAbsences}`,
+        description: "poissaoloa loytyi seuratuista kursseista.",
+        accentFrom: "from-[#ff9f67]/80",
+        accentVia: "via-[#ff5f9e]/70",
+        accentTo: "to-[#6f7eff]/80",
       },
-      {
-        id: 6,
-        content: (
-          <div className="text-center">
-            <h2 className="text-3xl font-bold mb-4 text-primary">Course Most Absences</h2>
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 260, damping: 20 }}
-              className="text-4xl font-bold text-accent"
-            >
-              {getCourseMostAbsences().course}
-            </motion.div>
-            <p className="mt-4 text-xl text-muted-foreground">
-              with {getCourseMostAbsences().count} absences
-            </p>
-          </div>
-        )
-      },
-      {
-        id: 7,
-        content: (
-          <div className="text-center">
-            <h2 className="text-3xl font-bold mb-4 text-primary">Debug Info</h2>
-            <div className="text-left text-sm overflow-auto max-h-48">
-              <p>Subjects: {subjects.length}</p>
-              <p>Grades: {grades.length}</p>
-              <p>Attendance Records: {attendance.length}</p>
-              <pre className="bg-card p-2 rounded-md mt-2">
-                {JSON.stringify({ 
-                  subjects: subjects.slice(0, 2), 
-                  grades: grades.slice(0, 2),
-                  attendance: attendance.slice(0, 2)
-                }, null, 2)}
-              </pre>
-            </div>
-          </div>
-        )
-      }
     ]
-    
-    setSlidesData(slides)
-    
-    const timer = setInterval(() => {
-      setCurrentSlide((prevSlide) => (prevSlide + 1) % slides.length)
-    }, 5000)
-    
-    return () => clearInterval(timer)
-  }, [isLoading, unreadMessages, subjects, grades, attendance])
+  }, [snapshot])
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">Loading data...</p>
-      </div>
-    )
-  }
-
-  if (slidesData.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">Preparing slideshow...</p>
+      <div className="flex min-h-screen items-center justify-center bg-[#03142d] px-4 text-white">
+        <p className="text-sm uppercase tracking-[0.2em] text-white/70">Rakennetaan wrappediasi...</p>
       </div>
     )
   }
 
   return (
-    <div className="relative w-full h-full bg-card rounded-lg shadow-lg p-6">
-      <AnimatePresence mode="wait">
-        <Slide key={currentSlide} content={slidesData[currentSlide].content} />
-      </AnimatePresence>
-      <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-2">
-        {slidesData.map((slide, index) => (
-          <motion.div
-            key={slide.id}
-            className={`w-2 h-2 rounded-full ${index === currentSlide ? "bg-primary" : "bg-secondary"}`}
-            animate={{ scale: index === currentSlide ? 1.5 : 1 }}
-            onClick={() => setCurrentSlide(index)}
-            style={{ cursor: 'pointer' }}
-          />
+    <main className="relative min-h-screen overflow-x-clip bg-[#03142d] text-white">
+      <div className="pointer-events-none fixed -left-24 top-[-6rem] h-72 w-72 rounded-full bg-[#00c2ff]/30 blur-3xl" />
+      <div className="pointer-events-none fixed right-[-5rem] top-16 h-80 w-80 rounded-full bg-[#ff5f9e]/35 blur-3xl" />
+      <div className="pointer-events-none fixed bottom-[-8rem] left-10 h-72 w-72 rounded-full bg-[#2d7eff]/35 blur-3xl" />
+
+      <div className="relative">
+        {slides.map((slide) => (
+          <SlidePanel key={slide.id} slide={slide} />
         ))}
       </div>
-    </div>
+    </main>
   )
 }

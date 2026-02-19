@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import Image from "next/image"
 import { useState } from "react"
@@ -45,7 +45,7 @@ export default function SignIn() {
         transition={{ duration: 0.5 }}
         className="w-full max-w-md space-y-8 rounded-xl bg-card p-8 shadow-lg"
       >
-        <h1 className="text-center text-3xl font-bold text-primary">Kirjaudu Wilmaan</h1>
+        <h1 className="text-center text-3xl font-bold text-primary">Kirjaudu Wilman avulla</h1>
         {error && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -92,7 +92,7 @@ export default function SignIn() {
             ) : (
               <>
                 <Image src="/wilma-logo.svg" alt="Wilma" width={18} height={18} />
-                Log in with Wilma
+                Kirjaudu Wilman avulla
               </>
             )}
           </Button>

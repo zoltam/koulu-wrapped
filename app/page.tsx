@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 
@@ -25,24 +25,36 @@ export default function Home() {
               Wrapped
             </h1>
             <p className="max-w-lg text-base text-white/80 sm:text-lg">
-              Näe lukuvuotesi tarina yhdellä napilla: viestit, arvosanat ja poissaolot Wrapped-tyylillä.
+              NÃ¤e lukuvuotesi tarina yhdellÃ¤ napilla: viestit, arvosanat ja
+              poissaolot Wrapped-tyylillÃ¤.
             </p>
-            <Link href="/signin" className="inline-block pt-6 sm:pt-8">
+            <Link href="/signin" className="inline-block pt-6 sm:pt-0">
               <Button
                 size="lg"
                 className="h-14 rounded-full border border-[#8ec5ff]/60 bg-gradient-to-r from-[#0d69be] via-[#1b84d8] to-[#0c5ca9] px-7 text-base font-bold text-white shadow-[0_16px_40px_rgba(12,92,169,0.45)] transition-transform hover:scale-[1.02] hover:brightness-110"
               >
-                <Image src="/wilma-logo.svg" alt="Wilma" width={22} height={22} />
-                Log in with Wilma
+                <Image
+                  src="/wilma-logo.svg"
+                  alt="Wilma"
+                  width={22}
+                  height={22}
+                />
+                Kirjaudu Wilman avulla
               </Button>
             </Link>
           </div>
 
           <aside className="rounded-3xl border border-white/20 bg-white/10 p-6 backdrop-blur-xl">
-            <p className="mb-5 text-xs font-semibold uppercase tracking-[0.2em] text-white/75">Esimerkki Wrapped</p>
+            <p className="mb-5 text-xs font-semibold uppercase tracking-[0.2em] text-white/75">
+              Esimerkki Wrapped
+            </p>
             <div className="space-y-3 rounded-2xl border border-white/15 bg-[#0b264a]/70 p-5">
-              <p className="text-2xl font-black tracking-tight">34 poissaoloa yhteensä</p>
-              <p className="text-base text-white/85">Paras aine: matematiikka</p>
+              <p className="text-2xl font-black tracking-tight">
+                34 poissaoloa yhteensÃ¤
+              </p>
+              <p className="text-base text-white/85">
+                Paras aine: matematiikka
+              </p>
               <p className="text-base text-white/85">Kurssien keskiarvo: 7.4</p>
             </div>
           </aside>
