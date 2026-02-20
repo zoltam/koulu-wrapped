@@ -7,33 +7,56 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { motion } from "framer-motion"
+import {
+  persistWrappedData,
+  startWilmaScrapeJob,
+  waitForWilmaScrapeJob,
+} from "@/lib/wilma-scrape-client"
+
+const PROGRESS_RING_RADIUS = 9
+const PROGRESS_RING_CIRCUMFERENCE = 2 * Math.PI * PROGRESS_RING_RADIUS
 
 export default function SignIn() {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [submitProgress, setSubmitProgress] = useState(0)
+  const [submitMessage, setSubmitMessage] = useState("Kirjaudutaan Wilmaan...")
   const [error, setError] = useState("")
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setSubmitProgress(4)
+    setSubmitMessage("Kirjaudutaan Wilmaan...")
     setError("")
 
     try {
-      sessionStorage.setItem("wilmaAuth", JSON.stringify({
-        username,
-        password
-      }))
+      sessionStorage.removeItem("wrappedReady")
+      const { jobId } = await startWilmaScrapeJob(username, password)
+      const data = await waitForWilmaScrapeJob(jobId, (progressEvent) => {
+        setSubmitProgress(progressEvent.progress)
+        setSubmitMessage(progressEvent.message)
+      })
 
+      if (!data.success) {
+        setError(data.error || "Wilma-yhteys epäonnistui.")
+        return
+      }
+
+      persistWrappedData(data)
+      sessionStorage.setItem("wilmaAuth", JSON.stringify({ username, password }))
       document.cookie = `wilmaUsername=${encodeURIComponent(username)};path=/;max-age=86400`
       document.cookie = `wilmaPassword=${encodeURIComponent(password)};path=/;max-age=86400`
-
-      router.push("/wrapped?loading=true")
-    } catch {
-      setError("Tapahtui odottamaton virhe. Yrit\u00E4 uudelleen.")
+      router.push("/wrapped")
+    } catch (error) {
+      const message = error instanceof Error ? error.message : ""
+      setError(message || "Tapahtui odottamaton virhe. Yrit\u00E4 uudelleen.")
     } finally {
       setIsLoading(false)
+      setSubmitProgress(0)
+      setSubmitMessage("Kirjaudutaan Wilmaan...")
     }
   }
 
@@ -88,11 +111,42 @@ export default function SignIn() {
             disabled={isLoading}
           >
             {isLoading ? (
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-                className="h-5 w-5 rounded-full border-r-2 border-t-2 border-white"
-              />
+              <div className="flex items-center gap-2">
+                <div className="relative h-6 w-6">
+                  <svg viewBox="0 0 24 24" className="absolute inset-0 h-6 w-6 -rotate-90">
+                    <circle cx="12" cy="12" r={PROGRESS_RING_RADIUS} stroke="rgba(255,255,255,0.28)" strokeWidth="2" fill="none" />
+                    <motion.circle
+                      cx="12"
+                      cy="12"
+                      r={PROGRESS_RING_RADIUS}
+                      stroke="white"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      fill="none"
+                      strokeDasharray={PROGRESS_RING_CIRCUMFERENCE}
+                      animate={{
+                        strokeDashoffset:
+                          PROGRESS_RING_CIRCUMFERENCE * (1 - submitProgress / 100),
+                      }}
+                      transition={{ duration: 0.35, ease: "easeOut" }}
+                    />
+                  </svg>
+                  <motion.span
+                    className="absolute inset-0 m-auto h-3 w-3 rounded-full bg-white/35"
+                    animate={{ opacity: [0.2, 0.45, 0.2], scale: [0.92, 1, 0.92] }}
+                    transition={{ duration: 1.1, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+                  />
+                </div>
+                <motion.span
+                  key={submitMessage}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-sm"
+                >
+                  {submitMessage}
+                </motion.span>
+              </div>
             ) : (
               <>
                 <Image src="/wilma-logo.svg" alt="Wilma" width={18} height={18} />
