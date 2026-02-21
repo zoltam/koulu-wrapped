@@ -3,11 +3,20 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { motion, useScroll, useTransform } from "framer-motion"
 
+interface EctsSummary {
+  years: string[]
+  byYear: Record<string, number>
+  total: number
+  rows: Array<{
+    courseType: string
+    byYear: Record<string, number>
+    total: number
+  }>
+}
+
 interface AttendanceData {
   courseCode: string
-  marks: {
-    [key: string]: number
-  }
+  marks: Record<string, number>
 }
 
 interface UserProfile {
@@ -16,9 +25,7 @@ interface UserProfile {
 }
 
 interface WrappedSnapshot {
-  unreadMessages: number
-  subjects: string[]
-  grades: number[][]
+  ectsSummary: EctsSummary
   attendance: AttendanceData[]
   userProfile: UserProfile | null
 }
@@ -50,38 +57,31 @@ function getFirstName(fullName: string | null | undefined): string {
   return first || "ystava"
 }
 
-function getAverageGrade(grades: number[][]): string {
-  const flat = grades.flat()
-  if (!flat.length) return "N/A"
-  const avg = flat.reduce((sum, value) => sum + value, 0) / flat.length
-  return avg.toFixed(1)
-}
-
-function getBestSubject(subjects: string[], grades: number[][]): string {
-  if (!subjects.length || !grades.length) return "Ei dataa"
-
-  let bestName = "Ei dataa"
-  let bestAverage = -1
-
-  subjects.forEach((subject, index) => {
-    const subjectGrades = grades[index] || []
-    if (!subjectGrades.length) return
-
-    const avg = subjectGrades.reduce((sum, value) => sum + value, 0) / subjectGrades.length
-    if (avg > bestAverage) {
-      bestAverage = avg
-      bestName = subject
-    }
-  })
-
-  return bestName
-}
-
-function getTotalAbsences(attendance: AttendanceData[]): number {
+function getTotalAttendanceMarks(attendance: AttendanceData[]): number {
   return attendance.reduce((total, course) => {
-    const courseTotal = Object.values(course.marks).reduce((sum, count) => sum + count, 0)
+    const courseTotal = Object.values(course.marks || {}).reduce((sum, count) => sum + count, 0)
     return total + courseTotal
   }, 0)
+}
+
+function getStudyTimeFromEcts(
+  ectsTotal: number,
+  attendanceMarksTotal: number
+): { lessons: number; hours: number; minutes: number } {
+  const ectsMinutes = Math.max(0, Math.round(ectsTotal * 14 * 60 + ectsTotal * 15))
+  const deductedMinutes = Math.max(0, attendanceMarksTotal) * 75
+  const totalMinutes = Math.max(0, ectsMinutes - deductedMinutes)
+  const lessons = Math.round(totalMinutes / 75)
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  return { lessons, hours, minutes }
+}
+
+function getStudyTimeSentence(hours: number, minutes: number): string {
+  if (minutes === 0) {
+    return `${hours} tuntia elämästäsi on kärsitty koulun penkillä.`
+  }
+  return `${hours} tuntia ja ${minutes} minuuttia elämästäsi on kärsitty koulun penkillä.`
 }
 
 function SlidePanel({ slide }: { slide: SlideData }) {
@@ -169,30 +169,34 @@ function SlidePanel({ slide }: { slide: SlideData }) {
 export default function Slideshow() {
   const [isLoading, setIsLoading] = useState(true)
   const [snapshot, setSnapshot] = useState<WrappedSnapshot>({
-    unreadMessages: 0,
-    subjects: [],
-    grades: [],
+    ectsSummary: { years: [], byYear: {}, total: 0, rows: [] },
     attendance: [],
     userProfile: null,
   })
 
   useEffect(() => {
-    const unreadMessages = Number.parseInt(sessionStorage.getItem("unreadMessages") || "0", 10)
-    const subjects = safeParseArray<string[]>(sessionStorage.getItem("subjects"), [])
-    const grades = safeParseArray<number[][]>(sessionStorage.getItem("grades"), [])
-    const attendance = safeParseArray<AttendanceData[]>(sessionStorage.getItem("attendance"), [])
+    const ectsSummary = safeParseArray<EctsSummary>(sessionStorage.getItem("ectsSummary"), {
+      years: [],
+      byYear: {},
+      total: 0,
+      rows: [],
+    })
     const userProfile = safeParseArray<UserProfile | null>(sessionStorage.getItem("userProfile"), null)
+    const attendance = safeParseArray<AttendanceData[]>(sessionStorage.getItem("attendance"), [])
 
-    setSnapshot({ unreadMessages, subjects, grades, attendance, userProfile })
+    setSnapshot({ ectsSummary, attendance, userProfile })
     setIsLoading(false)
   }, [])
 
   const slides = useMemo<SlideData[]>(() => {
     const firstName = getFirstName(snapshot.userProfile?.name)
     const school = snapshot.userProfile?.school || "Koulu"
-    const averageGrade = getAverageGrade(snapshot.grades)
-    const bestSubject = getBestSubject(snapshot.subjects, snapshot.grades)
-    const totalAbsences = getTotalAbsences(snapshot.attendance)
+    const attendanceMarksTotal = getTotalAttendanceMarks(snapshot.attendance)
+    const { lessons, hours, minutes } = getStudyTimeFromEcts(
+      snapshot.ectsSummary.total || 0,
+      attendanceMarksTotal
+    )
+    const studyTimeSentence = getStudyTimeSentence(hours, minutes)
 
     return [
       {
@@ -206,41 +210,10 @@ export default function Slideshow() {
         accentTo: "to-[#ff5f9e]/80",
       },
       {
-        id: "messages",
-        kicker: "Viestit",
-        title: "Inboksisi ei ollut hiljainen.",
-        highlight: `${snapshot.unreadMessages}`,
-        description: "lukematonta viestia odotti sinua Wilmassa.",
-        accentFrom: "from-[#23d6ff]/80",
-        accentVia: "via-[#2f7cff]/70",
-        accentTo: "to-[#89f5ff]/80",
-      },
-      {
-        id: "grades",
-        kicker: "Arvosanat",
-        title: "Kurssien keskiarvo",
-        highlight: averageGrade,
-        description: "Tama kertoo koko lukuvuoden tasaisesta tekemisesta.",
-        accentFrom: "from-[#4bd0ff]/80",
-        accentVia: "via-[#1a82d6]/70",
-        accentTo: "to-[#1a4bff]/80",
-      },
-      {
-        id: "best-subject",
-        kicker: "Vahvin aine",
-        title: "Paras aineesi oli",
-        highlight: bestSubject,
-        description: "Tassa aineessa sait lukuvuoden parhaat keskiarvot.",
-        accentFrom: "from-[#ff7aa8]/80",
-        accentVia: "via-[#6f7eff]/70",
-        accentTo: "to-[#4dd3ff]/80",
-      },
-      {
-        id: "attendance",
-        kicker: "Poissaolot",
-        title: "Poissaoloja yhteensa",
-        highlight: `${totalAbsences}`,
-        description: "poissaoloa loytyi seuratuista kursseista.",
+        id: "study-time",
+        kicker: "Lukioaika",
+        title: `Olet istunut yhteensä ${lessons} oppitunnilla lukio urasi aikana.`,
+        description: studyTimeSentence,
         accentFrom: "from-[#ff9f67]/80",
         accentVia: "via-[#ff5f9e]/70",
         accentTo: "to-[#6f7eff]/80",
