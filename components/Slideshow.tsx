@@ -97,7 +97,7 @@ function SlidePanel({ slide }: { slide: SlideData }) {
 
   return (
     <section ref={panelRef} className="relative h-[130vh]">
-      <div className="sticky top-0 flex h-screen items-center justify-center px-4 py-8 sm:px-8">
+      <div className="sticky top-0 flex h-[100svh] h-[100dvh] items-center justify-center px-4 py-8 sm:px-8">
         <motion.article
           style={{ opacity: cardOpacity, y: cardY, scale: cardScale }}
           className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-white/20 bg-white/10 p-7 shadow-[0_20px_80px_rgba(0,0,0,0.4)] backdrop-blur-xl"
@@ -250,14 +250,14 @@ export default function Slideshow() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#03142d] px-4 text-white">
+      <div className="flex min-h-[100svh] min-h-[100dvh] items-center justify-center bg-[#03142d] px-4 text-white">
         <p className="text-sm uppercase tracking-[0.2em] text-white/70">Rakennetaan wrappediasi...</p>
       </div>
     )
   }
 
   return (
-    <main className="relative min-h-screen overflow-x-clip bg-[#03142d] text-white">
+    <main className="relative min-h-[100svh] min-h-[100dvh] overflow-x-clip bg-[#03142d] text-white">
       <div className="pointer-events-none fixed -left-24 top-[-6rem] h-72 w-72 rounded-full bg-[#00c2ff]/30 blur-3xl" />
       <div className="pointer-events-none fixed right-[-5rem] top-16 h-80 w-80 rounded-full bg-[#ff5f9e]/35 blur-3xl" />
       <div className="pointer-events-none fixed bottom-[-8rem] left-10 h-72 w-72 rounded-full bg-[#2d7eff]/35 blur-3xl" />

@@ -384,9 +384,12 @@ async function scrapeWilma({
 
     if (mode === "attendance") {
       onProgress({ progress: 52, phase: "attendance", message: "Haetaan poissaolot..." })
-      await page.goto("https://yvkoulut.inschool.fi/attendance/view?range=-4", {
-        waitUntil: "domcontentloaded",
-      })
+      await page.goto(
+        "https://yvkoulut.inschool.fi/attendance/view?range=-3&first=1.1.2000&last=1.1.2040",
+        {
+          waitUntil: "domcontentloaded",
+        }
+      )
       const attendance = await getAttendanceData(page)
       onProgress({ progress: 92, phase: "attendance", message: "Poissaolot haettu." })
       return { success: true, attendance, userProfile }
@@ -400,9 +403,12 @@ async function scrapeWilma({
     const { subjects, grades } = await getGradesData(page)
 
     onProgress({ progress: 82, phase: "attendance", message: "Haetaan poissaolot..." })
-    await page.goto("https://yvkoulut.inschool.fi/attendance/view?range=-4", {
-      waitUntil: "domcontentloaded",
-    })
+    await page.goto(
+      "https://yvkoulut.inschool.fi/attendance/view?range=-3&first=1.1.2000&last=1.1.2040",
+      {
+        waitUntil: "domcontentloaded",
+      }
+    )
     const attendance = await getAttendanceData(page)
 
     onProgress({ progress: 96, phase: "finalizing", message: "Viimeistellään wrapped..." })

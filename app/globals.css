@@ -24,8 +24,14 @@
   --ring: 217 91% 60%;
 }
 
+html {
+  background-color: hsl(220, 17%, 10%);
+}
+
 body {
   background: linear-gradient(to bottom, hsl(220, 17%, 17%), hsl(220, 17%, 10%));
   color: hsl(210, 40%, 98%);
-  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
+  overscroll-behavior: none;
 }

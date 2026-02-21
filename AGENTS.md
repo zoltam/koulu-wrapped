@@ -34,11 +34,13 @@
 - Lint: `npm run lint`
 - Build: `npm run build`
 - Run production server: `npm run start`
+- Test scraping directly: `WILMA_USERNAME=... WILMA_PASSWORD=... npm run scrape:test -- --step all --out tmp/scrape-output.json`
 
 ## Local Workflow Preference
 - Do not run `npm run build` after making changes.
 - The user keeps a dev server running and handles build verification manually.
 - Use targeted checks (for example `npm run lint`) only when needed.
+- Prefer `npm run scrape:test` for scraping checks instead of manually testing through the sign-in UI.
 
 ## Scraping and Data Extraction Rules
 - Prefer extending `route.ts` step-by-step instead of adding separate scraping endpoints.
@@ -71,6 +73,7 @@
 - App still compiles (`npm run build`) or at minimum lints cleanly (`npm run lint`).
 - Sign-in -> wrapped flow still works end-to-end.
 - API route returns stable JSON for each step.
+- `npm run scrape:test` returns expected JSON structure for the step being verified.
 - UI handles missing/partial scrape results without crashing.
 - No sensitive data introduced in logs, code, or committed files.
 
