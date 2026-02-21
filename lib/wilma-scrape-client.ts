@@ -12,11 +12,44 @@ export interface UserProfile {
   school: string | null
 }
 
+export interface GradebookCourse {
+  courseCode: string
+  courseName: string
+  curriculum: string | null
+  subject: string | null
+  track: string | null
+  hierarchy: string[]
+  level: number
+  grade: number | string | null
+  gradeValue: number | null
+  ects: number | null
+  completionDate: string | null
+  completionDateIso: string | null
+  teacher: string | null
+  attendanceMarks?: Record<string, number>
+  attendanceTotal?: number
+}
+
+export interface EctsSummaryRow {
+  courseType: string
+  byYear: Record<string, number>
+  total: number
+}
+
+export interface EctsSummary {
+  years: string[]
+  byYear: Record<string, number>
+  total: number
+  rows: EctsSummaryRow[]
+}
+
 export interface WrappedDataResponse {
   success: boolean
   unreadMessages?: number
   subjects?: string[]
   grades?: number[][]
+  gradebookCourses?: GradebookCourse[]
+  ectsSummary?: EctsSummary
   attendance?: AttendanceData[]
   userProfile?: UserProfile
   error?: string
@@ -111,6 +144,11 @@ export function persistWrappedData(data: WrappedDataResponse): void {
   sessionStorage.setItem("unreadMessages", String(data.unreadMessages || 0))
   sessionStorage.setItem("subjects", JSON.stringify(data.subjects || []))
   sessionStorage.setItem("grades", JSON.stringify(data.grades || []))
+  sessionStorage.setItem("gradebookCourses", JSON.stringify(data.gradebookCourses || []))
+  sessionStorage.setItem(
+    "ectsSummary",
+    JSON.stringify(data.ectsSummary || { years: [], byYear: {}, total: 0, rows: [] })
+  )
   sessionStorage.setItem("attendance", JSON.stringify(data.attendance || []))
   sessionStorage.setItem("userProfile", JSON.stringify(data.userProfile || null))
   sessionStorage.setItem("wrappedReady", "1")
