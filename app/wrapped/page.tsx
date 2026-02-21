@@ -27,7 +27,7 @@ export default function Wrapped() {
         <div className="w-full max-w-md rounded-2xl border border-white/20 bg-white/10 p-6 text-center backdrop-blur-xl">
           <p className="text-base text-white/90">Wrapped-data puuttuu. Kirjaudu Wilmaan uudelleen.</p>
           <button
-            onClick={() => (window.location.href = "/signin")}
+            onClick={() => (window.location.href = "/")}
             className="mt-4 rounded-full border border-white/30 bg-white/10 px-5 py-2 text-sm text-white transition hover:bg-white/20"
           >
             Siirry kirjautumiseen

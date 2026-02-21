@@ -16,6 +16,35 @@ import {
 const PROGRESS_RING_RADIUS = 9
 const PROGRESS_RING_CIRCUMFERENCE = 2 * Math.PI * PROGRESS_RING_RADIUS
 
+function localizeWilmaError(message: string): string {
+  const normalized = message.toLowerCase().trim()
+
+  if (!normalized) {
+    return "Wilma-yhteys epäonnistui. Yritä uudelleen."
+  }
+
+  if (
+    normalized.includes("invalid wilma credentials") ||
+    normalized.includes("invalid credentials") ||
+    normalized.includes("incorrect username or password") ||
+    (normalized.includes("username") && normalized.includes("password") && normalized.includes("invalid"))
+  ) {
+    return "Virheellinen Wilma-käyttäjätunnus tai salasana."
+  }
+
+  if (
+    normalized.includes("timeout") ||
+    normalized.includes("timed out") ||
+    normalized.includes("network") ||
+    normalized.includes("fetch") ||
+    normalized.includes("failed to fetch")
+  ) {
+    return "Yhteys Wilmaan katkesi. Tarkista verkkoyhteys ja yritä uudelleen."
+  }
+
+  return "Wilma-yhteys epäonnistui. Yritä uudelleen."
+}
+
 export default function Home() {
   const [showLogin, setShowLogin] = useState(false)
   const [username, setUsername] = useState("")
@@ -42,7 +71,7 @@ export default function Home() {
       })
 
       if (!data.success) {
-        setError(data.error || "Wilma-yhteys epäonnistui.")
+        setError(localizeWilmaError(data.error || ""))
         return
       }
 
@@ -53,7 +82,7 @@ export default function Home() {
       router.push("/wrapped")
     } catch (error) {
       const message = error instanceof Error ? error.message : ""
-      setError(message || "Tapahtui odottamaton virhe. Yrit\u00E4 uudelleen.")
+      setError(localizeWilmaError(message))
     } finally {
       setIsLoading(false)
       setSubmitProgress(0)
@@ -82,7 +111,13 @@ export default function Home() {
               <p className="mt-2 text-center text-sm text-white/80">{"Kirjaudu Wilman avulla jatkaaksesi."}</p>
 
               {error ? (
-                <div className="mt-5 rounded-md bg-destructive p-3 text-sm text-destructive-foreground">{error}</div>
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-5 rounded-2xl border border-[#ff8fb2]/45 bg-[#ff4d7e]/15 px-4 py-3 text-sm text-white shadow-[0_8px_25px_rgba(255,77,126,0.2)] backdrop-blur-md"
+                >
+                  {error}
+                </motion.div>
               ) : null}
 
 
@@ -122,8 +157,13 @@ export default function Home() {
                 >
                   {isLoading ? (
                     <div className="flex items-center gap-2">
-                      <div className="relative h-6 w-6">
-                        <svg viewBox="0 0 24 24" className="absolute inset-0 h-6 w-6 -rotate-90">
+                      <div className="relative h-6 w-6 shrink-0">
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="absolute inset-0 -rotate-90 origin-center"
+                          style={{ width: "100%", height: "100%" }}
+                          aria-hidden="true"
+                        >
                           <circle cx="12" cy="12" r={PROGRESS_RING_RADIUS} stroke="rgba(255,255,255,0.28)" strokeWidth="2" fill="none" />
                           <motion.circle
                             cx="12"
@@ -141,11 +181,13 @@ export default function Home() {
                             transition={{ duration: 0.35, ease: "easeOut" }}
                           />
                         </svg>
-                        <motion.span
-                          className="absolute inset-0 m-auto h-3 w-3 rounded-full bg-white/35"
-                          animate={{ opacity: [0.2, 0.45, 0.2], scale: [0.92, 1, 0.92] }}
-                          transition={{ duration: 1.1, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
-                        />
+                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                          <motion.span
+                            className="block h-3 w-3 rounded-full bg-white/35"
+                            animate={{ opacity: [0.2, 0.45, 0.2], scale: [0.92, 1, 0.92] }}
+                            transition={{ duration: 1.1, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+                          />
+                        </div>
                       </div>
                       <motion.span
                         key={submitMessage}
@@ -168,7 +210,7 @@ export default function Home() {
                 <Button
                   type="button"
                   variant="ghost"
-                  className="w-full text-white/80 transition-all hover:rounded-full hover:bg-white/10 hover:text-white"
+                  className="h-12 w-full rounded-[10px] border border-white/20 bg-white/5 text-white/85 transition-all hover:bg-white/10 hover:text-white"
                   onClick={() => setShowLogin(false)}
                 >
                   Takaisin
