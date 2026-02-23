@@ -91,11 +91,7 @@ export default function Home() {
   }
 
   return (
-    <main className="relative min-h-[100svh] min-h-[100dvh] overflow-hidden bg-[#03142d] text-white">
-      <div className="pointer-events-none absolute -left-24 top-[-6rem] h-72 w-72 rounded-full bg-[#00c2ff]/30 blur-3xl" />
-      <div className="pointer-events-none absolute right-[-5rem] top-16 h-80 w-80 rounded-full bg-[#ff5f9e]/35 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-[-8rem] left-10 h-72 w-72 rounded-full bg-[#2d7eff]/35 blur-3xl" />
-
+    <main className="relative min-h-[100svh] min-h-[100dvh] overflow-hidden text-white">
       <section className="relative mx-auto flex min-h-[100svh] min-h-[100dvh] w-full max-w-6xl items-center px-6 py-10 sm:px-10 sm:py-14">
         <AnimatePresence mode="wait">
           {showLogin ? (

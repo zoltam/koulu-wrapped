@@ -25,11 +25,20 @@
 }
 
 html {
-  background-color: hsl(220, 17%, 10%);
+  background-color: hsl(220, 62%, 8%);
 }
 
 body {
-  background: linear-gradient(to bottom, hsl(220, 17%, 17%), hsl(220, 17%, 10%));
+  background-color: hsl(220, 62%, 8%);
+  background-image:
+    radial-gradient(120% 80% at 12% -10%, hsla(192, 100%, 66%, 0.18), transparent 55%),
+    radial-gradient(90% 70% at 88% 8%, hsla(335, 100%, 72%, 0.14), transparent 58%),
+    radial-gradient(140% 90% at 50% 110%, hsla(223, 100%, 66%, 0.16), transparent 60%),
+    repeating-linear-gradient(0deg, hsla(206, 48%, 72%, 0.06) 0 1px, transparent 1px 26px),
+    repeating-linear-gradient(90deg, hsla(206, 48%, 72%, 0.06) 0 1px, transparent 1px 26px),
+    repeating-linear-gradient(45deg, hsla(197, 86%, 80%, 0.04) 0 1px, transparent 1px 13px),
+    repeating-linear-gradient(-45deg, hsla(197, 86%, 80%, 0.04) 0 1px, transparent 1px 13px),
+    linear-gradient(180deg, hsl(218, 56%, 13%), hsl(220, 62%, 8%));
   color: hsl(210, 40%, 98%);
   min-height: 100svh;
   min-height: 100dvh;

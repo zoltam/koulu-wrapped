@@ -15,7 +15,7 @@ export default function Wrapped() {
 
   if (viewState === "checking") {
     return (
-      <div className="flex min-h-[100svh] min-h-[100dvh] items-center justify-center bg-[#03142d] px-4 text-white">
+      <div className="flex min-h-[100svh] min-h-[100dvh] items-center justify-center px-4 text-white">
         <p className="text-sm uppercase tracking-[0.2em] text-white/70">Tarkistetaan wrapped...</p>
       </div>
     )
@@ -23,7 +23,7 @@ export default function Wrapped() {
 
   if (viewState === "missing") {
     return (
-      <div className="flex min-h-[100svh] min-h-[100dvh] items-center justify-center bg-[#03142d] px-4 text-white">
+      <div className="flex min-h-[100svh] min-h-[100dvh] items-center justify-center px-4 text-white">
         <div className="w-full max-w-md rounded-2xl border border-white/20 bg-white/10 p-6 text-center backdrop-blur-xl">
           <p className="text-base text-white/90">Wrapped-data puuttuu. Kirjaudu Wilmaan uudelleen.</p>
           <button
